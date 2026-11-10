@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>律动音乐-后台管理</title>
+    <script src="../static/js/config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="../static/js/axios-config.js"></script>
+<!--    <script src="static/js/auth.js" defer></script>-->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <script>
+        const base = document.createElement('base');
+        base.href = `http://${SERVER_IP}/xgxmusic/`;
+        document.head.appendChild(base);
+    </script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        secondary: '#36D399',
+                        dark: '#1E293B',
+                        light: '#F8FAFC',
+                        danger: '#FF5252',
+                        warning: '#FFB800',
+                        info: '#2196F3'
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                    },
+                },
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .text-shadow {
+                text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .bg-gradient-music {
+                background: linear-gradient(135deg, #165DFF 0%, #0F172A 100%);
+            }
+            .glass-effect {
+                backdrop-filter: blur(10px);
+                background-color: rgba(255, 255, 255, 0.1);
+            }
+            .scrollbar-thin::-webkit-scrollbar {
+                width: 4px;
+                height: 4px;
+            }
+            .scrollbar-thin::-webkit-scrollbar-thumb {
+                background-color: rgba(255, 255, 255, 0.2);
+                border-radius: 2px;
+            }
+            .nav-active {
+                @apply bg-primary/20 text-primary border-l-4 border-primary;
+            }
+        }
+    </style>
+</head>
+<body class="font-inter bg-gray-900 text-light min-h-screen flex overflow-hidden">
+<!-- 侧边导航栏 -->
+<aside class="w-64 bg-dark/80 border-r border-white/10 h-screen fixed left-0 top-0 z-40 transition-all duration-300 scrollbar-thin overflow-y-auto">
+    <!-- 品牌标识 -->
+    <div class="flex items-center p-6 border-b border-white/10">
+        <div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mr-3">
+            <i class="fa fa-music text-primary text-xl"></i>
+        </div>
+        <h1 class="text-xl font-bold">律动音乐管理</h1>
+    </div>
+
+    <!-- 导航菜单 -->
+    <nav class="py-6">
+        <p class="px-6 text-xs text-gray-400 uppercase tracking-wider mb-2">主菜单</p>
+        <ul class="space-y-1">
+            <li>
+                <a href="#" class="nav-active flex items-center px-6 py-3 text-sm">
+                    <i class="fa fa-tachometer w-6 text-center"></i>
+                    <span class="ml-3">仪表盘</span>
+                </a>
+            </li>
+            <li>
+                <a href="#" class="flex items-center px-6 py-3 text-sm text-gray-300 hover:bg-white/5 transition-colors">
+                    <i class="fa fa-music w-6 text-center"></i>
+                    <span class="ml-3">歌曲管理</span>
+                </a>
+            </li>
+            <li>
+                <a href="#" class="flex items-center px-6 py-3 text-sm text-gray-300 hover:bg-white/5 transition-colors">
+                    <i class="fa fa-film w-6 text-center"></i>
+                    <span class="ml-3">专辑管理</span>
+                </a>
+            </li>
+            <li>
+                <a href="#" class="flex items-center px-6 py-3 text-sm text-gray-300 hover:bg-white/5 transition-colors">
+                    <i class="fa fa-users w-6 text-center"></i>
+                    <span class="ml-3">用户管理</span>
+                </a>
+            </li>
+            <li>
+                <a href="#" class="flex items-center px-6 py-3 text-sm text-gray-300 hover:bg-white/5 transition-colors">
+                    <i class="fa fa-list w-6 text-center"></i>
+                    <span class="ml-3">歌单管理</span>
+                </a>
+            </li>
+        </ul>
+
+        <p class="px-6 text-xs text-gray-400 uppercase tracking-wider mt-8 mb-2">系统设置</p>
+        <ul class="space-y-1">
+            <li>
+                <a href="#" class="flex items-center px-6 py-3 text-sm text-gray-300 hover:bg-white/5 transition-colors">
+                    <i class="fa fa-cog w-6 text-center"></i>
+                    <span class="ml-3">系统设置</span>
+                </a>
+            </li>
+            <li>
+                <a href="#" class="flex items-center px-6 py-3 text-sm text-gray-300 hover:bg-white/5 transition-colors">
+                    <i class="fa fa-bar-chart w-6 text-center"></i>
+                    <span class="ml-3">数据统计</span>
+                </a>
+            </li>
+            <li>
+                <a href="#" class="flex items-center px-6 py-3 text-sm text-gray-300 hover:bg-white/5 transition-colors">
+                    <i class="fa fa-shield w-6 text-center"></i>
+                    <span class="ml-3">权限管理</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- 底部 -->
+    <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
+        <div class="bg-white/5 rounded-lg p-3">
+            <div class="flex items-center">
+                <img src="https://picsum.photos/100/100?random=100" alt="管理员头像" class="w-10 h-10 rounded-full mr-3">
+                <div>
+                    <p class="text-sm font-medium">管理员</p>
+                    <p class="text-xs text-gray-400">admin@example.com</p>
+                </div>
+                <button id="logoutBtn" class="ml-auto text-gray-400 hover:text-danger transition-colors">
+                    <i class="fa fa-sign-out"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</aside>
+
+<!-- 主内容区域 -->
+<div class="flex-1 ml-64 transition-all duration-300">
+    <!-- 顶部导航栏 -->
+    <header class="glass-effect border-b border-white/10 h-16 fixed top-0 right-0 left-64 z-30">
+        <div class="flex items-center justify-between h-full px-6">
+            <div class="flex items-center">
+                <button id="sidebarToggle" class="mr-4 text-gray-400 hover:text-white transition-colors lg:hidden">
+                    <i class="fa fa-bars"></i>
+                </button>
+                <h2 class="text-lg font-semibold">仪表盘</h2>
+            </div>
+
+            <div class="flex items-center space-x-4">
+                <!-- 搜索框 -->
+                <div class="relative hidden md:block">
+                    <input type="text" placeholder="搜索..." class="pl-10 pr-4 py-2 rounded-lg bg-gray-800/50 border border-gray-700 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all text-sm w-64">
+                    <i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                </div>
+
+                <!-- 通知图标 -->
+                <button class="relative p-2 text-gray-400 hover:text-white transition-colors">
+                    <i class="fa fa-bell"></i>
+                    <span class="absolute top-1 right-1 w-2 h-2 bg-danger rounded-full"></span>
+                </button>
+
+                <!-- 消息图标 -->
+                <button class="relative p-2 text-gray-400 hover:text-white transition-colors">
+                    <i class="fa fa-envelope"></i>
+                    <span class="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full"></span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 页面内容 -->
+    <main class="p-6 pt-24 pb-16">
+        <!-- 页面标题 -->
+        <div class="mb-8">
+            <h1 class="text-2xl font-bold">欢迎回来，管理员</h1>
+            <p class="text-gray-400 mt-1">这是您的音乐平台管理概览</p>
+        </div>
+
+        <!-- 统计卡片 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- 歌曲总数 -->
+            <div class="glass-effect rounded-xl border border-white/10 p-6 hover:shadow-lg hover:shadow-primary/10 transition-all">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="text-gray-400 text-sm">歌曲总数</p>
+                        <h3 class="text-3xl font-bold mt-2">12,584</h3>
+                        <p class="text-secondary text-sm mt-2 flex items-center">
+                            <i class="fa fa-arrow-up mr-1"></i> 12% 较上月
+                        </p>
+                    </div>
+                    <div class="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+                        <i class="fa fa-music text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 专辑总数 -->
+            <div class="glass-effect rounded-xl border border-white/10 p-6 hover:shadow-lg hover:shadow-primary/10 transition-all">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="text-gray-400 text-sm">专辑总数</p>
+                        <h3 class="text-3xl font-bold mt-2">846</h3>
+                        <p class="text-secondary text-sm mt-2 flex items-center">
+                            <i class="fa fa-arrow-up mr-1"></i> 8% 较上月
+                        </p>
+                    </div>
+                    <div class="w-12 h-12 rounded-full bg-info/20 flex items-center justify-center text-info">
+                        <i class="fa fa-film text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 用户总数 -->
+            <div class="glass-effect rounded-xl border border-white/10 p-6 hover:shadow-lg hover:shadow-primary/10 transition-all">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="text-gray-400 text-sm">用户总数</p>
+                        <h3 class="text-3xl font-bold mt-2">186,429</h3>
+                        <p class="text-secondary text-sm mt-2 flex items-center">
+                            <i class="fa fa-arrow-up mr-1"></i> 23% 较上月
+                        </p>
+                    </div>
+                    <div class="w-12 h-12 rounded-full bg-warning/20 flex items-center justify-center text-warning">
+                        <i class="fa fa-users text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 播放次数 -->
+            <div class="glass-effect rounded-xl border border-white/10 p-6 hover:shadow-lg hover:shadow-primary/10 transition-all">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="text-gray-400 text-sm">总播放次数</p>
+                        <h3 class="text-3xl font-bold mt-2">3.2M</h3>
+                        <p class="text-danger text-sm mt-2 flex items-center">
+                            <i class="fa fa-arrow-down mr-1"></i> 3% 较上月
+                        </p>
+                    </div>
+                    <div class="w-12 h-12 rounded-full bg-secondary/20 flex items-center justify-center text-secondary">
+                        <i class="fa fa-play text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 图表和数据 -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <!-- 播放趋势图 -->
+            <div class="glass-effect rounded-xl border border-white/10 p-6 lg:col-span-2">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="font-bold">播放趋势</h3>
+                    <div class="flex space-x-2">
+                        <button class="px-3 py-1 text-xs rounded-full bg-primary/20 text-primary">周</button>
+                        <button class="px-3 py-1 text-xs rounded-full bg-white/5 text-gray-400 hover:bg-white/10 transition-colors">月</button>
+                        <button class="px-3 py-1 text-xs rounded-full bg-white/5 text-gray-400 hover:bg-white/10 transition-colors">年</button>
+                    </div>
+                </div>
+                <div class="h-80">
+                    <canvas id="playTrendChart"></canvas>
+                </div>
+            </div>
+
+            <!-- 分类占比 -->
+            <div class="glass-effect rounded-xl border border-white/10 p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="font-bold">音乐分类占比</h3>
+                    <button class="text-gray-400 hover:text-white transition-colors">
+                        <i class="fa fa-ellipsis-v"></i>
+                    </button>
+                </div>
+                <div class="h-80 flex items-center justify-center">
+                    <canvas id="genrePieChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- 最近活动和待处理事项 -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- 最近上传的歌曲 -->
+            <div class="glass-effect rounded-xl border border-white/10 p-6 lg:col-span-2">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="font-bold">最近上传的歌曲</h3>
+                    <a href="#" class="text-primary text-sm hover:underline">查看全部</a>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                        <tr class="border-b border-white/10">
+                            <th class="text-left py-4 px-3 text-sm font-medium text-gray-400">ID</th>
+                            <th class="text-left py-4 px-3 text-sm font-medium text-gray-400">歌曲</th>
+                            <th class="text-left py-4 px-3 text-sm font-medium text-gray-400">歌手</th>
+                            <th class="text-left py-4 px-3 text-sm font-medium text-gray-400">专辑</th>
+                            <th class="text-left py-4 px-3 text-sm font-medium text-gray-400">上传时间</th>
+                            <th class="text-left py-4 px-3 text-sm font-medium text-gray-400">操作</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
+                            <td class="py-4 px-3 text-sm">#SG-8542</td>
+                            <td class="py-4 px-3">
+                                <div class="flex items-center">
+                                    <img src="https://picsum.photos/100/100?random=50" alt="歌曲封面" class="w-8 h-8 rounded mr-3">
+                                    <span class="text-sm">星辰大海</span>
+                                </div>
+                            </td>
+                            <td class="py-4 px-3 text-sm">张碧晨</td>
+                            <td class="py-4 px-3 text-sm">时光里的歌</td>
+                            <td class="py-4 px-3 text-sm text-gray-400">今天 09:24</td>
+                            <td class="py-4 px-3">
+                                <div class="flex space-x-2">
+                                    <button class="text-primary hover:text-primary/80 transition-colors">
+                                        <i class="fa fa-edit"></i>
+                                    </button>
+                                    <button class="text-danger hover:text-danger/80 transition-colors">
+                                        <i class="fa fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
+                            <td class="py-4 px-3 text-sm">#SG-8541</td>
+                            <td class="py-4 px-3">
+                                <div class="flex items-center">
+                                    <img src="https://picsum.photos/100/100?random=51" alt="歌曲封面" class="w-8 h-8 rounded mr-3">
+                                    <span class="text-sm">起风了</span>
+                                </div>
+                            </td>
+                            <td class="py-4 px-3 text-sm">买辣椒也用券</td>
+                            <td class="py-4 px-3 text-sm">青春纪念册</td>
+                            <td class="py-4 px-3 text-sm text-gray-400">昨天 16:45</td>
+                            <td class="py-4 px-3">
+                                <div class="flex space-x-2">
+                                    <button class="text-primary hover:text-primary/80 transition-colors">
+                                        <i class="fa fa-edit"></i>
+                                    </button>
+                                    <button class="text-danger hover:text-danger/80 transition-colors">
+                                        <i class="fa fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
+                            <td class="py-4 px-3 text-sm">#SG-8540</td>
+                            <td class="py-4 px-3">
+                                <div class="flex items-center">
+                                    <img src="https://picsum.photos/100/100?random=52" alt="歌曲封面" class="w-8 h-8 rounded mr-3">
+                                    <span class="text-sm">大鱼</span>
+                                </div>
+                            </td>
+                            <td class="py-4 px-3 text-sm">周深</td>
+                            <td class="py-4 px-3 text-sm">大鱼海棠</td>
+                            <td class="py-4 px-3 text-sm text-gray-400">昨天 10:12</td>
+                            <td class="py-4 px-3">
+                                <div class="flex space-x-2">
+                                    <button class="text-primary hover:text-primary/80 transition-colors">
+                                        <i class="fa fa-edit"></i>
+                                    </button>
+                                    <button class="text-danger hover:text-danger/80 transition-colors">
+                                        <i class="fa fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="hover:bg-white/5 transition-colors">
+                            <td class="py-4 px-3 text-sm">#SG-8539</td>
+                            <td class="py-4 px-3">
+                                <div class="flex items-center">
+                                    <img src="https://picsum.photos/100/100?random=53" alt="歌曲封面" class="w-8 h-8 rounded mr-3">
+                                    <span class="text-sm">年少有为</span>
+                                </div>
+                            </td>
+                            <td class="py-4 px-3 text-sm">李荣浩</td>
+                            <td class="py-4 px-3 text-sm">耳朵</td>
+                            <td class="py-4 px-3 text-sm text-gray-400">2023-06-12</td>
+                            <td class="py-4 px-3">
+                                <div class="flex space-x-2">
+                                    <button class="text-primary hover:text-primary/80 transition-colors">
+                                        <i class="fa fa-edit"></i>
+                                    </button>
+                                    <button class="text-danger hover:text-danger/80 transition-colors">
+                                        <i class="fa fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 待处理事项 -->
+            <div class="glass-effect rounded-xl border border-white/10 p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="font-bold">待处理事项</h3>
+                    <button class="text-primary hover:text-primary/80 transition-colors">
+                        <i class="fa fa-plus"></i>
+                    </button>
+                </div>
+                <div class="space-y-4 max-h-96 overflow-y-auto scrollbar-thin pr-2">
+                    <!-- 待审核歌曲 -->
+                    <div class="bg-white/5 rounded-lg p-4 border border-white/5 hover:border-primary/30 transition-colors">
+                        <div class="flex items-start">
+                            <div class="w-8 h-8 rounded-full bg-warning/20 flex items-center justify-center text-warning mr-3 mt-0.5">
+                                <i class="fa fa-clock-o"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-medium text-sm">待审核歌曲</h4>
+                                <p class="text-gray-400 text-xs mt-1">有12首新上传歌曲需要审核</p>
+                                <div class="mt-3 flex justify-between items-center">
+                                    <span class="text-xs text-gray-400">今天 14:30 截止</span>
+                                    <button class="text-xs px-2 py-1 bg-warning/20 text-warning rounded hover:bg-warning/30 transition-colors">
+                                        处理
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 专辑封面更新 -->
+                    <div class="bg-white/5 rounded-lg p-4 border border-white/5 hover:border-primary/30 transition-colors">
+                        <div class="flex items-start">
+                            <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary mr-3 mt-0.5">
+                                <i class="fa fa-image"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-medium text-sm">专辑封面更新</h4>
+                                <p class="text-gray-400 text-xs mt-1">5张专辑封面需要更新高清版本</p>
+                                <div class="mt-3 flex justify-between items-center">
+                                    <span class="text-xs text-gray-400">明天 12:00 截止</span>
+                                    <button class="text-xs px-2 py-1 bg-primary/20 text-primary rounded hover:bg-primary/30 transition-colors">
+                                        处理
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 用户投诉处理 -->
+                    <div class="bg-white/5 rounded-lg p-4 border border-white/5 hover:border-primary/30 transition-colors">
+                        <div class="flex items-start">
+                            <div class="w-8 h-8 rounded-full bg-danger/20 flex items-center justify-center text-danger mr-3 mt-0.5">
+                                <i class="fa fa-exclamation-triangle"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-medium text-sm">用户投诉处理</h4>
+                                <p class="text-gray-400 text-xs mt-1">3条用户投诉需要处理和回复</p>
+                                <div class="mt-3 flex justify-between items-center">
+                                    <span class="text-xs text-gray-400">今天 18:00 截止</span>
+                                    <button class="text-xs px-2 py-1 bg-danger/20 text-danger rounded hover:bg-danger/30 transition-colors">
+                                        处理
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 月度报表生成 -->
+                    <div class="bg-white/5 rounded-lg p-4 border border-white/5 hover:border-primary/30 transition-colors">
+                        <div class="flex items-start">
+                            <div class="w-8 h-8 rounded-full bg-secondary/20 flex items-center justify-center text-secondary mr-3 mt-0.5">
+                                <i class="fa fa-file-text-o"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-medium text-sm">月度报表生成</h4>
+                                <p class="text-gray-400 text-xs mt-1">生成6月份平台运营数据报表</p>
+                                <div class="mt-3 flex justify-between items-center">
+                                    <span class="text-xs text-gray-400">2023-07-05 截止</span>
+                                    <button class="text-xs px-2 py-1 bg-secondary/20 text-secondary rounded hover:bg-secondary/30 transition-colors">
+                                        处理
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 系统维护通知 -->
+                    <div class="bg-white/5 rounded-lg p-4 border border-white/5 hover:border-primary/30 transition-colors">
+                        <div class="flex items-start">
+                            <div class="w-8 h-8 rounded-full bg-info/20 flex items-center justify-center text-info mr-3 mt-0.5">
+                                <i class="fa fa-bullhorn"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-medium text-sm">系统维护通知</h4>
+                                <p class="text-gray-400 text-xs mt-1">发布系统维护公告给所有用户</p>
+                                <div class="mt-3 flex justify-between items-center">
+                                    <span class="text-xs text-gray-400">2023-07-10 截止</span>
+                                    <button class="text-xs px-2 py-1 bg-info/20 text-info rounded hover:bg-info/30 transition-colors">
+                                        处理
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- 添加歌曲模态框 -->
+<div id="addSongModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="modalOverlay"></div>
+    <div class="relative glass-effect rounded-xl border border-white/10 shadow-2xl w-full max-w-2xl transform transition-all">
+        <div class="p-6 border-b border-white/10">
+            <div class="flex justify-between items-center">
+                <h3 class="text-xl font-bold">添加新歌曲</h3>
+                <button id="closeModal" class="text-gray-400 hover:text-white transition-colors">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+        </div>
+        <div class="p-6">
+            <form id="addSongForm" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- 歌曲封面 -->
+                    <div class="md:col-span-1">
+                        <label class="block text-sm font-medium text-gray-300 mb-2">歌曲封面</label>
+                        <div class="border-2 border-dashed border-white/20 rounded-lg p-6 text-center hover:border-primary transition-colors cursor-pointer" id="coverUploadArea">
+                            <input type="file" id="coverImage" accept="image/*" class="hidden">
+                            <div class="flex flex-col items-center">
+                                <i class="fa fa-cloud-upload text-3xl text-gray-400 mb-2"></i>
+                                <p class="text-sm text-gray-400">点击上传封面图片</p>
+                                <p class="text-xs text-gray-500 mt-1">支持JPG、PNG格式，建议尺寸400x400px</p>
+                            </div>
+                            <img id="coverPreview" src="" alt="封面预览" class="hidden w-full h-auto rounded-lg mt-2">
+                        </div>
+                    </div>
+
+                    <!-- 歌曲信息 -->
+                    <div class="md:col-span-1 space-y-4">
+                        <div>
+                            <label for="songTitle" class="block text-sm font-medium text-gray-300 mb-1">歌曲标题 <span class="text-danger">*</span></label>
+                            <input type="text" id="songTitle" class="w-full rounded-lg bg-gray-800/50 border border-gray-700 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all px-4 py-2 text-sm" placeholder="请输入歌曲标题" required>
+                        </div>
+                        <div>
+                            <label for="songArtist" class="block text-sm font-medium text-gray-300 mb-1">歌手 <span class="text-danger">*</span></label>
+                            <input type="text" id="songArtist" class="w-full rounded-lg bg-gray-800/50 border border-gray-700 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all px-4 py-2 text-sm" placeholder="请输入歌手名称" required>
+                        </div>
+                        <div>
+                            <label for="songAlbum" class="block text-sm font-medium text-gray-300 mb-1">专辑</label>
+                            <input type="text" id="songAlbum" class="w-full rounded-lg bg-gray-800/50 border border-gray-700 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all px-4 py-2 text-sm" placeholder="请输入专辑名称">
+                        </div>
+                        <div>
+                            <label for="songGenre" class="block text-sm font-medium text-gray-300 mb-1">音乐类型</label>
+                            <select id="songGenre" class="w-full rounded-lg bg-gray-800/50 border border-gray-700 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all px-4 py-2 text-sm">
+                                <option value="">请选择音乐类型</option>
+                                <option value="pop">流行</option>
+                                <option value="rock">摇滚</option>
+                                <option value="classical">古典</option>
+                                <option value="jazz">爵士</option>
+                                <option value="electronic">电子</option>
+                                <option value="folk">民谣</option>
+                                <option value="country">乡村</option>
+                                <option value="other">其他</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label for="songFile" class="block text-sm font-medium text-gray-300 mb-1">音频文件 <span class="text-danger">*</span></label>
+                        <div class="border-2 border-dashed border-white/20 rounded-lg p-6 text-center hover:border-primary transition-colors cursor-pointer" id="audioUploadArea">
+                            <input type="file" id="songFile" accept="audio/*" class="hidden">
+                            <div class="flex flex-col items-center">
+                                <i class="fa fa-music text-3xl text-gray-400 mb-2"></i>
+                                <p class="text-sm text-gray-400">点击上传音频文件</p>
+                                <p class="text-xs text-gray-500 mt-1">支持MP3、WAV格式，文件大小不超过30MB</p>
+                            </div>
+                            <div id="audioInfo" class="hidden mt-3 p-3 bg-white/5 rounded-lg">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center">
+                                        <i class="fa fa-file-audio-o text-primary mr-2"></i>
+                                        <span id="audioFileName" class="text-sm truncate"></span>
+                                    </div>
+                                    <span id="audioFileSize" class="text-xs text-gray-400"></span>
+                                </div>
+                                <div class="mt-2 h-1 bg-gray-700 rounded-full overflow-hidden">
+                                    <div id="audioUploadProgress" class="h-full w-0 bg-primary rounded-full transition-all"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="songLyrics" class="block text-sm font-medium text-gray-300 mb-1">歌词</label>
+                        <textarea id="songLyrics" rows="4" class="w-full rounded-lg bg-gray-800/50 border border-gray-700 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all px-4 py-2 text-sm" placeholder="请输入歌词（可选）"></textarea>
+                    </div>
+
+                    <div>
+                        <label for="songDescription" class="block text-sm font-medium text-gray-300 mb-1">歌曲描述</label>
+                        <textarea id="songDescription" rows="3" class="w-full rounded-lg bg-gray-800/50 border border-gray-700 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all px-4 py-2 text-sm" placeholder="请输入歌曲描述（可选）"></textarea>
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-4 pt-4 border-t border-white/10">
+                    <button type="button" id="cancelAddSong" class="px-6 py-2 rounded-lg border border-gray-600 hover:bg-gray-800 transition-colors text-sm">
+                        取消
+                    </button>
+                    <button type="submit" class="px-6 py-2 rounded-lg bg-primary hover:bg-primary/90 transition-colors text-sm flex items-center">
+                        <i class="fa fa-save mr-2"></i>保存歌曲
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 初始化图表
+    document.addEventListener('DOMContentLoaded', function() {
+        // 验证登录状态
+        if (!auth.isAuthenticated()) {
+            window.location.href = 'login.html';
+            return;
+        }
+
+        // 播放趋势图表
+        const playTrendCtx = document.getElementById('playTrendChart').getContext('2d');
+        const playTrendChart = new Chart(playTrendCtx, {
+            type: 'line',
+            data: {
+                labels: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+                datasets: [{
+                    label: '播放次数',
+                    data: [450000, 520000, 490000, 680000, 720000, 850000, 780000],
+                    borderColor: '#165DFF',
+                    backgroundColor: 'rgba(22, 93, 255, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: 2,
+                    pointBackgroundColor: '#165DFF',
+                    pointRadius: 3,
+                    pointHoverRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#e2e8f0',
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                        borderWidth: 1,
+                        padding: 10,
+                        displayColors: false,
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.raw.toLocaleString()} 次播放`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false,
+                            drawBorder: false
+                        },
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.5)'
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.05)',
+                            drawBorder: false
+                        },
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.5)',
+                            callback: function(value) {
+                                if (value >= 1000000) {
+                                    return (value / 1000000).toFixed(1) + 'M';
+                                } else if (value >= 1000) {
+                                    return (value / 1000).toFixed(0) + 'K';
+                                }
+                                return value;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // 音乐分类饼图
+        const genrePieCtx = document.getElementById('genrePieChart').getContext('2d');
+        const genrePieChart = new Chart(genrePieCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['流行', '摇滚', '古典', '电子', '民谣', '其他'],
+                datasets: [{
+                    data: [35, 20, 10, 15, 12, 8],
+                    backgroundColor: [
+                        '#165DFF',
+                        '#36D399',
+                        '#FF5252',
+                        '#FFB800',
+                        '#2196F3',
+                        '#7C3AED'
+                    ],
+                    borderWidth: 0,
+                    hoverOffset: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            padding: 15,
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            font: {
+                                size: 11
+                            }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#e2e8f0',
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                        borderWidth: 1,
+                        padding: 10,
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.label}: ${context.raw}%`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // 侧边栏切换（移动端）
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebar = document.querySelector('aside');
+        const mainContent = document.querySelector('.flex-1');
+        const header = document.querySelector('header');
+
+        if (sidebarToggle) {
+            sidebarToggle.addEventListener('click', function() {
+                if (sidebar.classList.contains('-translate-x-full')) {
+                    // 显示侧边栏
+                    sidebar.classList.remove('-translate-x-full');
+                    mainContent.classList.remove('ml-0');
+                    mainContent.classList.add('ml-64');
+                    header.classList.remove('left-0');
+                    header.classList.add('left-64');
+                } else {
+                    // 隐藏侧边栏
+                    sidebar.classList.add('-translate-x-full');
+                    mainContent.classList.remove('ml-64');
+                    mainContent.classList.add('ml-0');
+                    header.classList.remove('left-64');
+                    header.classList.add('left-0');
+                }
+            });
+        }
+
+        // 退出登录功能
+        document.getElementById('logoutBtn').addEventListener('click', async function() {
+            if (confirm('确定要退出登录吗？')) {
+                try {
+                    await auth.logout();
+                } catch (error) {
+                    console.error('退出登录失败:', error);
+                    alert('退出失败，请重试');
+                }
+            }
+        });
+
+        // 添加歌曲模态框相关功能
+        const addSongModal = document.getElementById('addSongModal');
+        const coverUploadArea = document.getElementById('coverUploadArea');
+        const coverImage = document.getElementById('coverImage');
+        const coverPreview = document.getElementById('coverPreview');
+        const audioUploadArea = document.getElementById('audioUploadArea');
+        const songFile = document.getElementById('songFile');
+        const audioInfo = document.getElementById('audioInfo');
+        const audioFileName = document.getElementById('audioFileName');
+        const audioFileSize = document.getElementById('audioFileSize');
+        const audioUploadProgress = document.getElementById('audioUploadProgress');
+        const closeModal = document.getElementById('closeModal');
+        const cancelAddSong = document.getElementById('cancelAddSong');
+        const addSongForm = document.getElementById('addSongForm');
+
+        // 打开模态框的按钮（假设页面中有多个按钮可以打开添加歌曲模态框）
+        document.querySelectorAll('button:has(.fa-plus), button:has(.fa-music)').forEach(button => {
+            button.addEventListener('click', function() {
+                addSongModal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            });
+        });
+
+        // 关闭模态框
+        function hideModal() {
+            addSongModal.classList.add('hidden');
+            document.body.style.overflow = '';
+            // 重置表单
+            addSongForm.reset();
+            coverPreview.classList.add('hidden');
+            audioInfo.classList.add('hidden');
+            audioUploadProgress.style.width = '0%';
+        }
+
+        closeModal.addEventListener('click', hideModal);
+        cancelAddSong.addEventListener('click', hideModal);
+        addSongModal.addEventListener('click', function(e) {
+            if (e.target === addSongModal) {
+                hideModal();
+            }
+        });
+
+        // 封面上传
+        coverUploadArea.addEventListener('click', function() {
+            coverImage.click();
+        });
+
+        coverImage.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    coverPreview.src = event.target.result;
+                    coverPreview.classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // 音频文件上传
+        audioUploadArea.addEventListener('click', function() {
+            songFile.click();
+        });
+
+        songFile.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                audioFileName.textContent = file.name;
+                audioFileSize.textContent = formatFileSize(file.size);
+                audioInfo.classList.remove('hidden');
+
+                // 模拟上传进度
+                simulateUploadProgress();
+            }
+        });
+
+        // 模拟上传进度
+        function simulateUploadProgress() {
+            let progress = 0;
+            audioUploadProgress.style.width = '0%';
+
+            const interval = setInterval(() => {
+                progress += Math.random() * 10;
+                if (progress >= 100) {
+                    progress = 100;
+                    clearInterval(interval);
+                }
+                audioUploadProgress.style.width = progress + '%';
+            }, 300);
+        }
+
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+            else return (bytes / 1048576).toFixed(1) + ' MB';
+        }
+
+        // 表单提交处理
+        addSongForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            // 简单验证
+            if (!coverImage.files[0]) {
+                alert('请上传歌曲封面');
+                return;
+            }
+
+            if (!songFile.files[0]) {
+                alert('请上传音频文件');
+                return;
+            }
+
+            if (!document.getElementById('songTitle').value.trim()) {
+                alert('请输入歌曲标题');
+                return;
+            }
+
+            if (!document.getElementById('songArtist').value.trim()) {
+                alert('请输入歌手名称');
+                return;
+            }
+
+            // 模拟表单提交
+            const submitButton = this.querySelector('button[type="submit"]');
+            const originalText = submitButton.innerHTML;
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i>上传中...';
+
+            // 模拟上传延迟
+            setTimeout(() => {
+                alert('歌曲添加成功！');
+                hideModal();
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalText;
+            }, 2000);
+        });
+
+        // 退出登录功能
+        document.getElementById('logoutBtn').addEventListener('click', async function() {
+            if (confirm('确定要退出登录吗？')) {
+                try {
+                    await auth.logout();
+                } catch (error) {
+                    console.error('退出登录失败:', error);
+                    alert('退出失败，请重试');
+                }
+            }
+        });
+    });
+</script>
+</body>
+</html>

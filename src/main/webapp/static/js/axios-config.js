@@ -1,0 +1,1 @@
+axios.defaults.baseURL = `http://${SERVER_IP}/xgxmusic`;

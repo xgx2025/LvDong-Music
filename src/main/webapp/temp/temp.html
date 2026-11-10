@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+
+</body>
+<script>// 搜索功能
+async function performSearch(keyword, page = 1) {
+    try {
+        const response = await fetch(`/api/search?q=${encodeURIComponent(keyword)}&page=${page}`);
+        const result = await response.json();
+
+        // 更新统计信息
+        updateSearchStats(result);
+
+        // 渲染歌曲列表
+        renderSongs(result.songs);
+
+        // 其他渲染函数...
+    } catch (error) {
+        console.error('搜索失败:', error);
+    }
+}
+
+function updateSearchStats(result) {
+    document.querySelector('.keyword').textContent = result.keyword;
+    document.querySelector('.song-count').textContent = result.songCount;
+    document.querySelector('.album-count').textContent = result.albumCount;
+    document.querySelector('.artist-count').textContent = result.artistCount;
+}
+
+function renderSongs(songs) {
+    const tbody = document.querySelector('.songs-table tbody');
+    tbody.innerHTML = '';
+
+    songs.forEach(song => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${song.rank}</td>
+            <td>${song.name}</td>
+            <td>${song.artistNames}</td>
+            <td>${song.albumName}</td>
+            <td>${song.duration}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// 标签切换
+document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.result-section').forEach(s => s.classList.remove('active'));
+
+        tab.classList.add('active');
+        document.querySelector(`.${tab.dataset.tab}-section`).classList.add('active');
+    });
+});
+
+// 初始化
+const urlParams = new URLSearchParams(window.location.search);
+const keyword = urlParams.get('q');
+if (keyword) {
+    performSearch(keyword);
+}</script>
+</html>

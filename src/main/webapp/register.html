@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>律动 - 注册账号</title>
+    <script src="static/js/config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="static/js/axios-config.js"></script>
+    <!-- 引入认证系统 -->
+    <script src="static/js/auth.js"></script>
+    <script>
+        // 直接执行，无需等待DOM加载完成
+        const base = document.createElement('base');
+        base.href = `http://${SERVER_IP}/xgxmusic/`;
+        document.head.appendChild(base);
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+
+    <!-- Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1c42df',  // 更明亮的蓝色
+                        secondary: '#3BECB4', // 更清新的绿色
+                        accent: '#FF7D9D',   // 添加粉色作为点缀色
+                        accent2: '#FFB74D',  // 添加橙色作为点缀色
+                        dark: '#1E293B',
+                        light: '#F8FAFC',
+                        glass: 'rgba(255, 255, 255, 0.15)' // 更透明的玻璃效果
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                    },
+                },
+            }
+        }
+    </script>
+
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .text-shadow {
+                text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .bg-gradient-music {
+                background: linear-gradient(135deg, #4A6CF7 0%, #3BECB4 100%); /* 更明亮的渐变 */
+            }
+            .glass-effect {
+                backdrop-filter: blur(10px);
+                background-color: rgba(255, 255, 255, 0.1);
+            }
+            .input-field {
+                @apply pl-10 block w-full rounded-lg border border-gray-600/50 bg-gray-700/20 py-3 px-4 text-white placeholder-gray-400/60;
+                @apply focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all duration-200;
+                @apply hover:border-gray-500 hover:bg-gray-700/30;
+            }
+            .input-field:focus {
+                box-shadow: 0 0 0 3px rgba(28, 66, 223, 0.15);
+            }
+            .input-icon {
+                @apply text-gray-400/80 group-hover:text-gray-300 group-focus-within:text-primary transition-colors;
+            }
+        }
+    </style>
+</head>
+<body class="font-inter bg-gray-900 text-light min-h-screen flex items-center justify-center p-4">
+<!-- 背景 -->
+<div class="fixed inset-0 -z-10">
+    <div class="absolute inset-0 bg-gradient-music opacity-80"></div>
+    <div class="absolute inset-0 bg-dark opacity-40"></div>
+</div>
+
+<!-- 主容器 -->
+<div class="w-full max-w-md">
+    <!-- 播放器徽标 -->
+    <div class="text-center mb-8">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/20 mb-4">
+            <i class="fa fa-music text-primary text-3xl"></i>
+        </div>
+        <h1 class="text-[clamp(2rem,5vw,2.5rem)] font-bold text-white text-shadow">律动</h1>
+        <p class="text-gray-300 mt-2">创建你的音乐世界</p>
+    </div>
+
+    <!-- 注册表单卡片 -->
+    <div class="glass-effect rounded-2xl p-8 border border-white/10 shadow-xl transition-all duration-300 hover:shadow-2xl">
+        <form id="registerForm" class="space-y-6">
+            <!-- 用户名 -->
+            <div class="space-y-2">
+                <label for="username" class="block text-sm font-medium text-gray-200">用户名</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa fa-user-o text-gray-400"></i>
+                    </div>
+                    <input type="text" id="username" name="username" class="input-field" placeholder="起个好听的名字" required>
+                </div>
+            </div>
+
+            <!-- 邮箱 -->
+            <div class="space-y-2">
+                <label for="email" class="block text-sm font-medium text-gray-200">邮箱</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa fa-envelope-o text-gray-400"></i>
+                    </div>
+                    <input type="email" id="email" name="email" class="input-field" placeholder="example@mail.com" required>
+                </div>
+            </div>
+
+            <!-- 密码 -->
+            <div class="space-y-2">
+                <label for="password" class="block text-sm font-medium text-gray-200">密码</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa fa-lock text-gray-400"></i>
+                    </div>
+                    <input type="password" id="password" name="password" class="input-field" placeholder="至少8个字符" required>
+                    <button type="button" id="togglePassword" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white transition-colors">
+                        <i class="fa fa-eye-slash"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 确认密码 -->
+            <div class="space-y-2">
+                <label for="confirmPassword" class="block text-sm font-medium text-gray-200">确认密码</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa fa-lock text-gray-400"></i>
+                    </div>
+                    <input type="password" id="confirmPassword" name="confirmPassword" class="input-field" placeholder="再次输入密码" required>
+                    <button type="button" id="toggleConfirmPassword" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white transition-colors">
+                        <i class="fa fa-eye-slash"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 验证码 -->
+            <div class="space-y-2">
+                <label for="verificationCode" class="block text-sm font-medium text-gray-200">验证码</label>
+                <div class="flex gap-3">
+                    <div class="relative flex-1">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fa fa-shield text-gray-400"></i>
+                        </div>
+                        <input type="text" id="verificationCode" name="verificationCode" class="input-field" placeholder="请输入验证码" required>
+                    </div>
+                    <button type="button" id="getVerificationCode" class="rounded-lg bg-primary/20 hover:bg-primary/30 text-primary font-medium py-3 px-4 transition-all whitespace-nowrap border border-primary/30">
+                        获取验证码
+                    </button>
+                </div>
+            </div>
+
+            <!-- 同意条款 -->
+            <div class="flex items-start">
+                <div class="flex items-center h-5">
+                    <input id="terms" name="terms" type="checkbox" class="h-4 w-4 rounded border-gray-600 text-primary focus:ring-primary/50 bg-gray-800" required>
+                </div>
+                <div class="ml-3 text-sm">
+                    <label for="terms" class="text-gray-300">我同意<a href="static/agreement/service-agreement.html" target="_blank" class="text-primary hover:text-primary/80 transition-colors">《服务条款》</a>
+                        和<a href="static/agreement/privacy-policy.html" target="_blank" class="text-primary hover:text-primary/80 transition-colors">《隐私政策》</a></label>
+                </div>
+            </div>
+
+            <!-- 注册按钮 -->
+            <button type="submit" class="w-full rounded-lg bg-[#4A6CF7] hover:bg-[#4A6CF7]/90 text-white font-medium py-3 px-4 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-lg flex items-center justify-center">
+                <span>创建账号</span>
+                <i class="fa fa-arrow-right ml-2"></i>
+            </button>
+
+            <!-- 分隔线 -->
+            <div class="relative">
+                <div class="absolute inset-0 flex items-center">
+                    <div class="w-full border-t border-gray-700"></div>
+                </div>
+                <div class="relative flex justify-center text-sm">
+                    <span class="px-2 bg-gray-800/50 text-gray-400">或者</span>
+                </div>
+            </div>
+
+            <!-- 社交注册 -->
+            <div class="grid grid-cols-3 gap-4">
+                <button type="button" class="flex items-center justify-center rounded-lg border border-gray-700 bg-gray-800/50 py-3 px-4 text-gray-300 hover:bg-gray-700/50 hover:text-white transition-all">
+                    <i class="fa fa-google"></i>
+                </button>
+                <button type="button" class="flex items-center justify-center rounded-lg border border-gray-700 bg-gray-800/50 py-3 px-4 text-gray-300 hover:bg-gray-700/50 hover:text-white transition-all">
+                    <i class="fa fa-weixin"></i>
+                </button>
+                <button type="button" class="flex items-center justify-center rounded-lg border border-gray-700 bg-gray-800/50 py-3 px-4 text-gray-300 hover:bg-gray-700/50 hover:text-white transition-all">
+                    <i class="fa fa-github"></i>
+                </button>
+            </div>
+            <input type="hidden" name="action" value="register">
+        </form>
+
+        <!-- 登录链接 -->
+        <p class="mt-6 text-center text-sm text-gray-400">
+            已有账号? <a href="login.html" class="font-medium text-primary hover:text-[#4A6CF7]/80 transition-colors">立即登录</a>
+        </p>
+    </div>
+
+    <!-- 页脚 -->
+    <div class="mt-8 text-center text-xs text-black">
+        <p>© 2025 XGX. All Rights Reserved.</p>
+    </div>
+</div>
+
+<!-- JavaScript -->
+<script>
+    // 密码显示/隐藏切换
+    const togglePassword = document.getElementById('togglePassword');
+    const passwordInput = document.getElementById('password');
+    const toggleConfirmPassword = document.getElementById('toggleConfirmPassword');
+    const confirmPasswordInput = document.getElementById('confirmPassword');
+
+    togglePassword.addEventListener('click', function() {
+        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordInput.setAttribute('type', type);
+        this.querySelector('i').classList.toggle('fa-eye');
+        this.querySelector('i').classList.toggle('fa-eye-slash');
+    });
+
+    toggleConfirmPassword.addEventListener('click', function() {
+        const type = confirmPasswordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        confirmPasswordInput.setAttribute('type', type);
+        this.querySelector('i').classList.toggle('fa-eye');
+        this.querySelector('i').classList.toggle('fa-eye-slash');
+    });
+
+    // 获取验证码按钮逻辑
+    const getVerificationCodeBtn = document.getElementById('getVerificationCode');
+    let countdown = 60;
+    let countdownTimer = null;
+
+    getVerificationCodeBtn.addEventListener('click', function() {
+        const email = document.getElementById('email').value;
+
+        // 验证邮箱格式
+        if (!email || !/\S+@\S+\.\S+/.test(email)) {
+            alert('请输入有效的邮箱地址');
+            return;
+        }
+
+        // 禁用按钮并开始倒计时
+        this.disabled = true;
+        this.innerHTML = `重新发送(${countdown}s)`;
+        this.classList.remove('bg-primary/20', 'hover:bg-primary/30');
+        this.classList.add('bg-gray-700', 'opacity-50');
+
+        // 发送验证码请求
+        axios.post('authServlet?action=sendVerificationCode', {
+            email: email
+        })
+            .then(response => {
+                if (response.data.success) {
+                    alert('验证码已发送至您的邮箱，请查收');
+
+                    // 启动倒计时
+                    countdownTimer = setInterval(() => {
+                        countdown--;
+                        this.innerHTML = `重新发送(${countdown}s)`;
+
+                        if (countdown <= 0) {
+                            clearInterval(countdownTimer);
+                            this.disabled = false;
+                            this.innerHTML = '获取验证码';
+                            this.classList.remove('bg-gray-700', 'opacity-50');
+                            this.classList.add('bg-primary/20', 'hover:bg-primary/30');
+                            countdown = 60;
+                        }
+                    }, 1000);
+                } else {
+                    alert(`验证码发送失败: ${response.data.message}`);
+                    this.disabled = false;
+                    this.innerHTML = '获取验证码';
+                    this.classList.remove('bg-gray-700', 'opacity-50');
+                    this.classList.add('bg-primary/20', 'hover:bg-primary/30');
+                }
+            })
+            .catch(error => {
+                console.error('发送验证码错误:', error);
+                showToast('网络错误，请稍后重试');
+                alert('网络错误，请稍后重试');
+                this.disabled = false;
+                this.innerHTML = '获取验证码';
+                this.classList.remove('bg-gray-700', 'opacity-50');
+                this.classList.add('bg-primary/20', 'hover:bg-primary/30');
+            });
+    });
+
+    // 表单提交处理
+    const registerForm = document.getElementById('registerForm');
+    registerForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        // 验证密码匹配
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+        const verificationCode = document.getElementById('verificationCode').value;
+
+        if (confirmPassword.length < 8) {
+            alert('密码长度至少为8个字符!');
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            alert('两次输入的密码不匹配!');
+            return;
+        }
+
+        if (!verificationCode) {
+            alert('请输入验证码!');
+            return;
+        }
+
+        // 收集表单数据
+        const formData = {
+            username: document.getElementById('username').value,
+            email: document.getElementById('email').value,
+            password: password,
+            verificationCode: verificationCode
+        };
+
+        const submitBtn = this.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i> 注册中...';
+
+        axios.post('userServlet?action=register', formData, {
+        })
+            .then(response => {
+                const result = response.data;
+                if(result.success) {
+                    console.log('注册成功:',);
+                    alert('注册成功! 前往登录吧...');
+                    window.location.href = 'login.html';
+                }else{
+                    alert("注册失败，"+result.message+"!");
+                }
+            })
+            .catch(error => {
+                console.error('注册错误:', error);
+                if (error.response) {
+
+                    alert(`注册失败: ${error.response.data.message || '服务器错误'}`);
+                } else if (error.request) {
+
+                    alert('网络连接失败，请检查网络设置');
+                } else {
+
+                    alert('请求错误: ' + error.message);
+                }
+            })
+            .finally(() => {
+                // 恢复按钮状态
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<span>注册</span><i class="fa fa-arrow-right ml-2"></i>';
+            });
+    });
+</script>
+</body>
+</html>

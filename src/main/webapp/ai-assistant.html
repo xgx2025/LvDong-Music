@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>律动音乐-AI助手</title>
+    <link rel="icon" href="static/favicon-512.png" sizes="512x512" type="image/png">
+    <script src="static/js/config.js"></script>
+    <script src="static/js/utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="static/js/axios-config.js"></script>
+    <script src="static/js/auth.js" defer></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        const base = document.createElement('base');
+        base.href = `http://${SERVER_IP}/xgxmusic/`;
+        document.head.appendChild(base);
+    </script>
+
+    <!-- Tailwind 配置 - 优化后的颜色方案 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1c42df',  // 蓝色
+                        secondary: '#3BECB4', // 更清新的绿色
+                        accent: '#2EC4B6',  // 蓝绿色(点缀色)
+                        accent2: '#FFB74D',  // 橙色点缀色
+                        dark: '#1E293B',
+                        light: '#F8FAFC',
+                        glass: 'rgba(255, 255, 255, 0.15)' // 透明玻璃效果
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                    },
+                },
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .text-shadow {
+                text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .bg-gradient-music {
+                background: linear-gradient(135deg, #4A6CF7 0%, #3BECB4 100%);
+            }
+            .glass-effect {
+                backdrop-filter: blur(10px);
+                background-color: rgba(255, 255, 255, 0.15);
+            }
+            .scrollbar-hide::-webkit-scrollbar {
+                display: none;
+            }
+            .album-hover {
+                transition: transform 0.3s ease, box-shadow 0.3s ease;
+            }
+            .album-hover:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+            }
+            .hover-accent:hover {
+                color: #2EC4B6;
+            }
+            .hover-accent2:hover {
+                color: #FFB74D;
+            }
+            .bg-card {
+                background-color: rgba(255, 255, 255, 0.3);
+            }
+            .typing-indicator {
+                display: inline-block;
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background-color: #2EC4B6;
+                margin-right: 4px;
+                animation: typing 1s infinite ease-in-out;
+            }
+            .typing-indicator:nth-child(2) {
+                animation-delay: 0.2s;
+            }
+            .typing-indicator:nth-child(3) {
+                animation-delay: 0.4s;
+            }
+            @keyframes typing {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(-5px); }
+            }
+        }
+    </style>
+</head>
+<body class="font-inter bg-gradient-to-br from-blue-50 to-green-50 text-gray-800 min-h-screen">
+<!-- 背景 -->
+<div class="fixed inset-0 -z-10">
+    <div class="absolute inset-0 bg-gradient-music opacity-30"></div>
+    <div class="absolute inset-0 bg-white/20"></div>
+</div>
+
+<!-- 顶部导航 -->
+<header class="fixed top-0 left-0 right-0 z-50 p-4 glass-effect border-b border-white/30">
+    <div class="container mx-auto flex justify-between items-center">
+        <!-- 品牌标识 -->
+        <div class="flex items-center">
+            <div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mr-2">
+                <i class="fa fa-music text-primary"></i>
+            </div>
+            <h1 class="text-xl font-bold text-gray-800">律动AI助手</h1>
+        </div>
+
+        <!-- 搜索栏 -->
+        <div class="relative max-w-md w-full mx-4 block">
+            <input type="text" id="aiSearchInput" placeholder="向AI提问关于音乐的任何问题..."
+                   class="w-full pl-10 pr-4 py-2 rounded-full bg-white/50 border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all text-gray-700">
+            <i class="fa fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"></i>
+        </div>
+
+        <!-- 导航菜单 -->
+        <nav>
+            <ul class="flex space-x-6 items-center">
+                <li><a href="home.html" class="text-gray-700 hover:text-primary transition-colors"><i class="fa fa-home mr-1"></i>首页</a></li>
+                <li><a href="humming-recognition.html" class="text-gray-700 hover:text-primary transition-colors"><i class="fa fa-microphone mr-1"></i>哼唱识曲</a></li>
+                <li><a href="upload-music.html" class="text-gray-700 hover:text-primary transition-colors"><i class="fa fa-upload mr-1"></i>上传</a></li>
+                <li><a href="ai-assistant.html" class="text-primary border-b-2 border-primary pb-1"><i class="fa fa-robot mr-1"></i>AI助手</a></li>
+                <li><a href="feedback.html" class="text-gray-700 hover:text-primary transition-colors"><i class="fa fa-comment mr-1"></i>反馈</a></li>
+                <li><a href="user-profile.html" class="text-gray-700 hover:text-primary transition-colors"><i class="fa fa-user mr-1"></i>我的</a></li>
+                <li>
+                    <button id="logoutBtn" class="text-gray-700 hover:text-accent transition-colors">
+                        <i class="fa fa-sign-out"></i>
+                    </button>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</header>
+
+<!-- 主内容区 -->
+<main class="container mx-auto pt-24 pb-32 px-4">
+    <!-- AI助手欢迎区 -->
+    <section class="mb-8">
+        <div class="flex items-center mb-4">
+            <div class="w-12 h-12 rounded-full bg-accent/20 flex items-center justify-center mr-3">
+                <i class="fa fa-robot text-accent text-xl"></i>
+            </div>
+            <div>
+                <h2 class="text-xl font-bold text-gray-800">律动AI音乐助手</h2>
+                <p class="text-gray-600">我可以回答关于音乐的任何问题</p>
+            </div>
+        </div>
+
+        <!-- 快捷问题建议 -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <button class="quick-question bg-white/50 rounded-lg p-4 text-left hover:bg-white/70 transition-colors border border-white/30">
+                <h3 class="font-medium text-gray-800">推荐几首适合学习的轻音乐</h3>
+                <p class="text-gray-600 text-sm mt-1">点击提问</p>
+            </button>
+            <button class="quick-question bg-white/50 rounded-lg p-4 text-left hover:bg-white/70 transition-colors border border-white/30">
+                <h3 class="font-medium text-gray-800">最近有什么新发行的华语专辑</h3>
+                <p class="text-gray-600 text-sm mt-1">点击提问</p>
+            </button>
+            <button class="quick-question bg-white/50 rounded-lg p-4 text-left hover:bg-white/70 transition-colors border border-white/30">
+                <h3 class="font-medium text-gray-800">如何提高唱歌技巧</h3>
+                <p class="text-gray-600 text-sm mt-1">点击提问</p>
+            </button>
+            <button class="quick-question bg-white/50 rounded-lg p-4 text-left hover:bg-white/70 transition-colors border border-white/30">
+                <h3 class="font-medium text-gray-800">解释一下这首歌的歌词含义</h3>
+                <p class="text-gray-600 text-sm mt-1">点击提问</p>
+            </button>
+        </div>
+    </section>
+
+    <!-- 对话区域 -->
+    <section class="mb-8">
+        <div class="bg-white/50 rounded-xl border border-white/30 overflow-hidden">
+            <!-- 对话容器 -->
+            <div id="chatContainer" class="h-[calc(100vh-400px)] min-h-[300px] overflow-y-auto p-4 space-y-6">
+                <!-- AI欢迎消息 -->
+                <div class="flex items-start space-x-3">
+                    <div class="flex-shrink-0 w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center">
+                        <i class="fa fa-robot text-accent text-sm"></i>
+                    </div>
+                    <div class="bg-white/70 rounded-lg p-4 max-w-[80%] shadow-sm">
+                        <p class="text-gray-800">你好！我是律动AI音乐助手，可以为你解答关于音乐的各种问题，包括歌曲推荐、歌词解析、音乐知识等。有什么我可以帮你的吗？</p>
+                    </div>
+                </div>
+
+                <!-- 用户消息示例 -->
+                <div class="flex items-start space-x-3 justify-end">
+                    <div class="bg-primary/10 rounded-lg p-4 max-w-[80%] shadow-sm">
+                        <p class="text-gray-800">能推荐几首适合晨跑时听的歌曲吗？</p>
+                    </div>
+                    <div class="flex-shrink-0 w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                        <i class="fa fa-user text-primary text-sm"></i>
+                    </div>
+                </div>
+
+                <!-- AI回复示例 -->
+                <div class="flex items-start space-x-3">
+                    <div class="flex-shrink-0 w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center">
+                        <i class="fa fa-robot text-accent text-sm"></i>
+                    </div>
+                    <div class="bg-white/70 rounded-lg p-4 max-w-[80%] shadow-sm">
+                        <p class="text-gray-800 mb-2">当然可以！以下是几首非常适合晨跑时听的活力歌曲：</p>
+                        <ul class="list-disc pl-5 space-y-1 text-gray-700">
+                            <li>《Wake Me Up》- Avicii</li>
+                            <li>《Can't Stop the Feeling!》- Justin Timberlake</li>
+                            <li>《Happy》- Pharrell Williams</li>
+                            <li>《Run the World (Girls)》- Beyoncé</li>
+                        </ul>
+                        <p class="text-gray-800 mt-2">这些歌曲节奏明快，能帮助你保持跑步的动力！</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 输入区域 -->
+            <div class="border-t border-white/30 p-4">
+                <div class="flex items-center space-x-2">
+                    <input type="text" id="messageInput" placeholder="输入你的问题..."
+                           class="flex-1 px-4 py-2 rounded-full bg-white/70 border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all text-gray-700">
+                    <button id="sendButton" class="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-white hover:bg-accent/90 transition-all">
+                        <i class="fa fa-paper-plane"></i>
+                    </button>
+                </div>
+                <p class="text-xs text-gray-500 mt-2 text-center">律动AI可能会产生不准确的信息，请理性判断</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- AI功能特色 -->
+    <section class="mb-8">
+        <h3 class="text-xl font-bold text-gray-800 mb-4">AI音乐助手能做什么</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-white/50 rounded-xl p-6 border border-white/30">
+                <div class="w-12 h-12 rounded-full bg-accent/20 flex items-center justify-center mb-4">
+                    <i class="fa fa-music text-accent"></i>
+                </div>
+                <h4 class="font-bold text-gray-800 mb-2">个性化推荐</h4>
+                <p class="text-gray-600">根据你的喜好和心情，推荐适合的歌曲和歌单</p>
+            </div>
+            <div class="bg-white/50 rounded-xl p-6 border border-white/30">
+                <div class="w-12 h-12 rounded-full bg-accent/20 flex items-center justify-center mb-4">
+                    <i class="fa fa-book text-accent"></i>
+                </div>
+                <h4 class="font-bold text-gray-800 mb-2">歌词解析</h4>
+                <p class="text-gray-600">深入解析歌词含义，帮助你更好地理解歌曲</p>
+            </div>
+            <div class="bg-white/50 rounded-xl p-6 border border-white/30">
+                <div class="w-12 h-12 rounded-full bg-accent/20 flex items-center justify-center mb-4">
+                    <i class="fa fa-graduation-cap text-accent"></i>
+                </div>
+                <h4 class="font-bold text-gray-800 mb-2">音乐知识</h4>
+                <p class="text-gray-600">解答音乐理论、乐器学习和创作技巧等问题</p>
+            </div>
+        </div>
+    </section>
+</main>
+
+<!-- 底部播放器（固定在底部） -->
+<div class="fixed bottom-0 left-0 right-0 glass-effect border-t border-white/30 z-50">
+    <div class="container mx-auto px-4">
+        <div class="flex items-center justify-between h-20">
+            <!-- 当前播放歌曲信息 -->
+            <div class="flex items-center w-1/3">
+                <img src="https://picsum.photos/100/100?random=40" alt="当前播放" class="w-12 h-12 rounded mr-3">
+                <div class="min-w-0">
+                    <h4 class="font-medium text-sm truncate text-gray-800">追光者</h4>
+                    <p class="text-gray-600 text-xs truncate">岑宁儿</p>
+                </div>
+                <button class="ml-4 text-gray-600 hover:text-accent transition-colors">
+                    <i class="fa fa-heart-o"></i>
+                </button>
+            </div>
+
+            <!-- 播放控制 -->
+            <div class="flex flex-col items-center justify-center w-1/3">
+                <div class="flex items-center space-x-6 mb-2">
+                    <button class="text-gray-600 hover:text-accent transition-colors">
+                        <i class="fa fa-random"></i>
+                    </button>
+                    <button class="text-gray-600 hover:text-accent transition-colors">
+                        <i class="fa fa-step-backward"></i>
+                    </button>
+                    <button class="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-white hover:bg-accent/90 transition-all">
+                        <i class="fa fa-pause ml-0.5"></i>
+                    </button>
+                    <button class="text-gray-600 hover:text-accent transition-colors">
+                        <i class="fa fa-step-forward"></i>
+                    </button>
+                    <button class="text-gray-600 hover:text-accent transition-colors">
+                        <i class="fa fa-repeat"></i>
+                    </button>
+                </div>
+                <div class="flex items-center w-full max-w-md">
+                    <span class="text-xs text-gray-600 mr-2">1:23</span>
+                    <div class="flex-1 h-1 bg-gray-300 rounded-full overflow-hidden">
+                        <div class="h-full w-1/3 bg-accent rounded-full relative">
+                            <div class="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white shadow"></div>
+                        </div>
+                    </div>
+                    <span class="text-xs text-gray-600 ml-2">3:55</span>
+                </div>
+            </div>
+
+            <!-- 音量控制 -->
+            <div class="flex items-center justify-end w-1/3">
+                <button class="text-gray-600 hover:text-accent transition-colors mr-2">
+                    <i class="fa fa-list"></i>
+                </button>
+                <div class="hidden md:flex items-center">
+                    <button class="text-gray-600 hover:text-accent transition-colors mr-2">
+                        <i class="fa fa-volume-up"></i>
+                    </button>
+                    <div class="w-20 h-1 bg-gray-300 rounded-full overflow-hidden">
+                        <div class="h-full w-2/3 bg-gray-400 rounded-full"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript -->
+<script>
+    // 页面加载时验证登录状态并获取用户信息
+    document.addEventListener('DOMContentLoaded', function() {
+        const userInfo = auth.getUserInfo();
+        if (auth.isAuthenticated()) {
+            // 已登录，显示登录成功内容
+            console.log('通过验证');
+        } else {
+            window.location.href='login.html';
+        }
+
+        // 退出登录功能
+        document.getElementById('logoutBtn').addEventListener('click', async function() {
+            console.log("退出登录");
+            if (confirm('确定要退出登录吗？')) {
+                // 调用auth的logout方法
+                if (typeof auth !== 'undefined' && auth.logout) {
+                    await auth.logout();
+                }
+            }
+        });
+
+        // 快捷问题按钮点击事件
+        document.querySelectorAll('.quick-question').forEach(button => {
+            button.addEventListener('click', function() {
+                const question = this.querySelector('h3').textContent;
+                document.getElementById('messageInput').value = question;
+                document.getElementById('messageInput').focus();
+            });
+        });
+
+        // 发送消息功能
+        document.getElementById('sendButton').addEventListener('click', sendMessage);
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // 搜索框事件
+        document.getElementById('aiSearchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const query = this.value.trim();
+                if (query) {
+                    document.getElementById('messageInput').value = query;
+                    document.getElementById('messageInput').focus();
+                    this.value = '';
+                    sendMessage();
+                }
+            }
+        });
+
+        function sendMessage() {
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value.trim();
+
+            if (!message) return;
+
+            // 添加用户消息到聊天界面
+            addMessageToChat('user', message);
+            messageInput.value = '';
+
+            // 显示AI正在输入的指示器
+            showTypingIndicator();
+
+            // 模拟AI回复（实际应用中这里应该是API调用）
+            setTimeout(() => {
+                hideTypingIndicator();
+                const aiResponse = generateAIResponse(message);
+                addMessageToChat('ai', aiResponse);
+
+                // 滚动到底部
+                const chatContainer = document.getElementById('chatContainer');
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }, 1500);
+        }
+
+        function addMessageToChat(sender, message) {
+            const chatContainer = document.getElementById('chatContainer');
+            const messageElement = document.createElement('div');
+            messageElement.className = `flex items-start space-x-3 ${sender === 'user' ? 'justify-end' : ''}`;
+
+            if (sender === 'user') {
+                messageElement.innerHTML = `
+                    <div class="bg-primary/10 rounded-lg p-4 max-w-[80%] shadow-sm">
+                        <p class="text-gray-800">${escapeHtml(message)}</p>
+                    </div>
+                    <div class="flex-shrink-0 w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                        <i class="fa fa-user text-primary text-sm"></i>
+                    </div>
+                `;
+            } else {
+                messageElement.innerHTML = `
+                    <div class="flex-shrink-0 w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center">
+                        <i class="fa fa-robot text-accent text-sm"></i>
+                    </div>
+                    <div class="bg-white/70 rounded-lg p-4 max-w-[80%] shadow-sm">
+                        <p class="text-gray-800">${message}</p>
+                    </div>
+                `;
+            }
+
+            chatContainer.appendChild(messageElement);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            const chatContainer = document.getElementById('chatContainer');
+            const typingElement = document.createElement('div');
+            typingElement.className = 'flex items-start space-x-3';
+            typingElement.id = 'typingIndicator';
+            typingElement.innerHTML = `
+                <div class="flex-shrink-0 w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center">
+                    <i class="fa fa-robot text-accent text-sm"></i>
+                </div>
+                <div class="bg-white/70 rounded-lg p-4 max-w-[80%] shadow-sm">
+                    <div class="flex">
+                        <div class="typing-indicator"></div>
+                        <div class="typing-indicator"></div>
+                        <div class="typing-indicator"></div>
+                    </div>
+                </div>
+            `;
+
+            chatContainer.appendChild(typingElement);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function hideTypingIndicator() {
+            const typingElement = document.getElementById('typingIndicator');
+            if (typingElement) {
+                typingElement.remove();
+            }
+        }
+
+        // 模拟AI回复生成
+        function generateAIResponse(userMessage) {
+            // 这里应该是调用AI API获取真实回复
+            // 以下是模拟回复
+            const lowerMessage = userMessage.toLowerCase();
+
+            if (lowerMessage.includes('推荐') || lowerMessage.includes('晨跑') || lowerMessage.includes('跑步')) {
+                return `根据你的需求，我推荐以下几首适合晨跑的歌曲：<br><br>
+                <ul class="list-disc pl-5 space-y-1">
+                    <li>《Eye of the Tiger》- Survivor (经典激励歌曲)</li>
+                    <li>《Run the World (Girls)》- Beyoncé (节奏感强)</li>
+                    <li>《Can't Hold Us》- Macklemore & Ryan Lewis (快节奏)</li>
+                </ul><br>
+                这些歌曲节奏适中，能帮助你保持跑步的节奏和动力！`;
+            } else if (lowerMessage.includes('歌词') || lowerMessage.includes('含义')) {
+                return `歌曲《追光者》的歌词表达了一种默默追随、无私奉献的情感。歌词中的"光"象征着希望、梦想或所爱之人，整首歌描绘了一个人愿意成为追光者，即使不被注意也甘愿付出的心境。<br><br>
+                特别是副歌部分"我可以跟在你身后，像影子追着光梦游"生动地表现了这种无怨无悔的追随。`;
+            } else if (lowerMessage.includes('新歌') || lowerMessage.includes('新发行')) {
+                return `最近发行的值得关注的新专辑和单曲有：<br><br>
+                <strong>新专辑：</strong>
+                <ul class="list-disc pl-5 space-y-1">
+                    <li>《Midnights (The Til Dawn Edition)》- Taylor Swift (2023年5月)</li>
+                    <li>《Gloria》- Sam Smith (2023年1月)</li>
+                </ul>
+                <strong>新单曲：</strong>
+                <ul class="list-disc pl-5 space-y-1">
+                    <li>《Flowers》- Miley Cyrus</li>
+                    <li>《Kill Bill》- SZA</li>
+                </ul>`;
+            } else if (lowerMessage.includes('唱歌') || lowerMessage.includes('技巧')) {
+                return `提高唱歌技巧的几个实用建议：<br><br>
+                1. <strong>正确呼吸：</strong> 学习腹式呼吸，这是唱歌的基础<br>
+                2. <strong>热身练习：</strong> 唱歌前做发声练习，如音阶练习<br>
+                3. <strong>姿势正确：</strong> 站立时保持身体放松但挺直<br>
+                4. <strong>录音自评：</strong> 录制自己唱歌并分析改进<br>
+                5. <strong>保护嗓子：</strong> 多喝水，避免过度用嗓<br><br>
+                建议从简单的歌曲开始练习，逐步挑战难度更高的歌曲。`;
+            } else {
+                return `感谢你的提问！关于"${escapeHtml(userMessage)}"，我可以提供以下信息：<br><br>
+                音乐是一种艺术形式和文化活动，通过声音和时间的组织来表达情感和思想。它包含旋律、和声、节奏等基本元素，可以分为多种流派如流行、摇滚、古典、爵士等。<br><br>
+                如果你有更具体的问题，比如想了解某位歌手、某种音乐风格，或者需要歌曲推荐，我很乐意提供更详细的帮助！`;
+            }
+        }
+    });
+</script>
+</body>
+</html>

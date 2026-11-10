@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <!--  依赖和脚本在引导页中  -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>律动音乐-上传音乐</title>
+<!--    <script>-->
+<!--        setInterval(() => {-->
+<!--            if(navigator.webdriver || window.outerWidth - window.innerWidth > 200){-->
+<!--                document.body.innerHTML = '<h1>阻止了非法访问</h1>';-->
+<!--                window.stop();-->
+<!--            }-->
+<!--        }, 1000);-->
+<!--        document.addEventListener('contextmenu', e => e.preventDefault());-->
+<!--        document.onkeydown = function(e) {-->
+<!--            if(e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) {-->
+<!--                return false;-->
+<!--            }-->
+<!--        };-->
+<!--        document.addEventListener('keydown', (e) => {-->
+<!--            if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.code === 'KeyI')) {-->
+<!--                e.preventDefault();-->
+<!--            }-->
+<!--        });-->
+<!--    </script>-->
+    <script src="static/js/config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="static/js/axios-config.js"></script>
+    <script src="static/js/auth.js" defer></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        const base = document.createElement('base');
+        base.href = `http://${SERVER_IP}/xgxmusic/`;
+        document.head.appendChild(base);
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>律动音乐-上传音乐</title>
+
+    <!-- Tailwind 配置 - 优化后的颜色方案 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1c42df',  // 蓝色
+                        secondary: '#3BECB4', // 更清新的绿色
+                        accent: '#2EC4B6',  // 蓝绿色(点缀色)
+                        accent2: '#FFB74D',  // 橙色点缀色
+                        dark: '#1E293B',
+                        light: '#F8FAFC',
+                        glass: 'rgba(255, 255, 255, 0.15)' // 透明玻璃效果
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                    },
+                },
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .text-shadow {
+                text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .bg-gradient-music {
+                background: linear-gradient(135deg, #4A6CF7 0%, #3BECB4 100%);
+            }
+            .glass-effect {
+                backdrop-filter: blur(10px);
+                background-color: rgba(255, 255, 255, 0.15);
+            }
+            .scrollbar-hide::-webkit-scrollbar {
+                display: none;
+            }
+            .album-hover {
+                transition: transform 0.3s ease, box-shadow 0.3s ease;
+            }
+            .album-hover:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+            }
+            .hover-accent:hover {
+                color: #2EC4B6;
+            }
+            .hover-accent2:hover {
+                color: #FFB74D;
+            }
+            .bg-card {
+                background-color: rgba(255, 255, 255, 0.3);
+            }
+            .file-input-label {
+                border: 2px dashed rgba(30, 41, 59, 0.3);
+                transition: all 0.3s ease;
+            }
+            .file-input-label:hover {
+                border-color: #1c42df;
+                background-color: rgba(28, 66, 223, 0.05);
+            }
+            .file-input-label.drag-over {
+                border-color: #3BECB4;
+                background-color: rgba(59, 236, 180, 0.1);
+            }
+        }
+    </style>
+</head>
+<body class="font-inter bg-gradient-to-br from-blue-50 to-green-50 text-gray-800 min-h-screen">
+<!-- 背景 -->
+<div class="fixed inset-0 -z-10">
+    <div class="absolute inset-0 bg-gradient-music opacity-30"></div>
+    <div class="absolute inset-0 bg-white/20"></div>
+</div>
+
+<!-- 顶部导航 -->
+<header class="fixed top-0 left-0 right-0 z-50 p-4 glass-effect border-b border-white/30">
+    <div class="container mx-auto flex justify-between items-center">
+        <!-- 品牌标识 -->
+        <div class="flex items-center">
+            <div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mr-2">
+                <i class="fa fa-music text-primary"></i>
+            </div>
+            <h1 class="text-xl font-bold text-gray-800">律动</h1>
+        </div>
+
+        <!-- 搜索栏 -->
+        <div class="relative max-w-md w-full mx-4 hidden md:block">
+            <input type="text" placeholder="搜索歌曲、歌手或专辑..."
+                   class="w-full pl-10 pr-4 py-2 rounded-full bg-white/50 border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all text-gray-700">
+            <i class="fa fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"></i>
+        </div>
+
+        <!-- 导航菜单 -->
+        <nav>
+            <ul class="flex space-x-6 items-center">
+                <li><a href="home.html" class="text-gray-700 hover:text-primary transition-colors"><i class="fa fa-home mr-1"></i>首页</a></li>
+                <li><a href="upload.html" class="text-primary border-b-2 border-primary pb-1"><i class="fa fa-upload mr-1"></i>上传</a></li>
+                <li><a href="user-profile.html" class="text-gray-700 hover:text-primary transition-colors"><i class="fa fa-user mr-1"></i>我的</a></li>
+                <li>
+                    <button id="logoutBtn" class="text-gray-700 hover:text-accent transition-colors">
+                        <i class="fa fa-sign-out"></i>
+                    </button>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</header>
+
+<!-- 主内容区 -->
+<main class="container mx-auto pt-24 pb-32 px-4">
+
+</main>
+
+<!-- 底部播放器（固定在底部） -->
+<div class="fixed bottom-0 left-0 right-0 glass-effect border-t border-white/30 z-50">
+    <div class="container mx-auto px-4">
+        <div class="flex items-center justify-between h-20">
+            <!-- 当前播放歌曲信息 -->
+            <div class="flex items-center w-1/3">
+                <img src="https://picsum.photos/100/100?random=40" alt="当前播放" class="w-12 h-12 rounded mr-3">
+                <div class="min-w-0">
+                    <h4 class="font-medium text-sm truncate text-gray-800">追光者</h4>
+                    <p class="text-gray-600 text-xs truncate">岑宁儿</p>
+                </div>
+                <button class="ml-4 text-gray-600 hover:text-accent transition-colors">
+                    <i class="fa fa-heart-o"></i>
+                </button>
+            </div>
+
+            <!-- 播放控制 -->
+            <div class="flex flex-col items-center justify-center w-1/3">
+                <div class="flex items-center space-x-6 mb-2">
+                    <button class="text-gray-600 hover:text-accent transition-colors">
+                        <i class="fa fa-random"></i>
+                    </button>
+                    <button class="text-gray-600 hover:text-accent transition-colors">
+                        <i class="fa fa-step-backward"></i>
+                    </button>
+                    <button class="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-white hover:bg-accent/90 transition-all">
+                        <i class="fa fa-pause ml-0.5"></i>
+                    </button>
+                    <button class="text-gray-600 hover:text-accent transition-colors">
+                        <i class="fa fa-step-forward"></i>
+                    </button>
+                    <button class="text-gray-600 hover:text-accent transition-colors">
+                        <i class="fa fa-repeat"></i>
+                    </button>
+                </div>
+                <div class="flex items-center w-full max-w-md">
+                    <span class="text-xs text-gray-600 mr-2">1:23</span>
+                    <div class="flex-1 h-1 bg-gray-300 rounded-full overflow-hidden">
+                        <div class="h-full w-1/3 bg-accent rounded-full relative">
+                            <div class="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white shadow"></div>
+                        </div>
+                    </div>
+                    <span class="text-xs text-gray-600 ml-2">3:55</span>
+                </div>
+            </div>
+
+            <!-- 音量控制 -->
+            <div class="flex items-center justify-end w-1/3">
+                <button class="text-gray-600 hover:text-accent transition-colors mr-2">
+                    <i class="fa fa-list"></i>
+                </button>
+                <div class="hidden md:flex items-center">
+                    <button class="text-gray-600 hover:text-accent transition-colors mr-2">
+                        <i class="fa fa-volume-up"></i>
+                    </button>
+                    <div class="w-20 h-1 bg-gray-300 rounded-full overflow-hidden">
+                        <div class="h-full w-2/3 bg-gray-400 rounded-full"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript -->
+<script>
+    // 页面加载时验证登录状态并检查音乐人状态
+    document.addEventListener('DOMContentLoaded', function() {
+        // 检查登录状态
+        if (!auth.isAuthenticated()) {
+            window.location.href = 'login.html';
+            return;
+        }
+
+        const userInfo = auth.getUserInfo();
+
+        // 显示加载状态
+        document.querySelector('main').innerHTML = `
+            <div class="flex justify-center items-center h-64">
+                <i class="fa fa-spinner fa-spin text-4xl text-primary"></i>
+            </div>
+        `;
+
+        // 检查音乐人状态
+        checkMusicianStatus(userInfo.userId);
+
+        // 退出登录功能
+        document.getElementById('logoutBtn').addEventListener('click', async function() {
+            if (confirm('确定要退出登录吗？')) {
+                if (typeof auth !== 'undefined' && auth.logout) {
+                    await auth.logout();
+                }
+            }
+        });
+    });
+    // 检查音乐人状态
+    function checkMusicianStatus(userId) {
+        // 显示加载状态
+        document.querySelector('main').innerHTML = `
+        <div class="flex justify-center items-center h-64">
+            <i class="fa fa-spinner fa-spin text-4xl text-primary"></i>
+        </div>
+    `;
+
+        // 这里应该是实际的API请求
+        axios.get(`/singerServlet?action=getStatus&singerId=${userId}`)
+            .then(response => {
+                updateMusicianStatusUI(response.data.status);
+            })
+            .catch(error => {
+                console.error('获取音乐人状态失败:', error);
+                showErrorState();
+            });
+    }
+
+    // 根据状态更新UI
+    function updateMusicianStatusUI(status) {
+        const mainContent = document.querySelector('main');
+
+        switch(status) {
+            case 'approved':
+                // 已认证音乐人 - 显示上传表单
+                mainContent.innerHTML = ` <!-- 上传音乐标题 -->
+    <section class="mb-8">
+        <h2 class="text-[clamp(1.5rem,3vw,2.5rem)] font-bold text-shadow text-gray-800">上传音乐</h2>
+        <p class="text-gray-600 mt-2">分享你的音乐作品给更多人</p>
+    </section>
+
+    <!-- 上传表单 -->
+    <section class="glass-effect rounded-xl border border-white/30 p-6 max-w-3xl mx-auto">
+        <form id="uploadForm" class="space-y-6">
+            <!-- 音乐名称 -->
+            <div>
+                <label for="songName" class="block text-sm font-medium text-gray-700 mb-1">音乐名称 *</label>
+                <input type="text" id="songName" name="songName" required
+                       class="w-full px-4 py-2 rounded-lg bg-white/50 border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all text-gray-700">
+            </div>
+
+            <!-- 歌手 -->
+            <div>
+                <label for="singerId" class="block text-sm font-medium text-gray-700 mb-1">歌手ID *</label>
+                <input type="text" id="singerId" name="singerId" required
+                       class="w-full px-4 py-2 rounded-lg bg-white/50 border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all text-gray-700">
+            </div>
+
+            <!-- 专辑 -->
+            <div>
+                <label for="album" class="block text-sm font-medium text-gray-700 mb-1">专辑 (可选)</label>
+                <input type="text" id="album" name="album"
+                       class="w-full px-4 py-2 rounded-lg bg-white/50 border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all text-gray-700">
+            </div>
+
+            <!-- 时长 -->
+            <div>
+                <label for="duration" class="block text-sm font-medium text-gray-700 mb-1">时长 (mm:ss) *</label>
+                <input type="text" id="duration" name="duration" placeholder="例如: 03:45" required
+                       class="w-full px-4 py-2 rounded-lg bg-white/50 border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all text-gray-700">
+            </div>
+
+            <!-- 音乐文件上传 -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">音乐文件 (MP3) *</label>
+                <label for="musicFile" id="musicFileLabel" class="file-input-label flex flex-col items-center justify-center p-6 rounded-lg cursor-pointer">
+                    <i class="fa fa-music text-4xl text-gray-400 mb-2"></i>
+                    <span class="text-gray-600 font-medium">点击或拖拽上传MP3文件</span>
+                    <span class="text-gray-500 text-sm mt-1">支持格式: .mp3</span>
+                    <span id="musicFileName" class="text-primary text-sm mt-2 hidden"></span>
+                    <input type="file" id="musicFile" name="musicFile" accept=".mp3" class="hidden" required>
+                </label>
+            </div>
+
+            <!-- 歌词文件上传 -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">歌词文件 (LRC) (可选)</label>
+                <label for="lyricsFile" id="lyricsFileLabel" class="file-input-label flex flex-col items-center justify-center p-6 rounded-lg cursor-pointer">
+                    <i class="fa fa-file-text-o text-4xl text-gray-400 mb-2"></i>
+                    <span class="text-gray-600 font-medium">点击或拖拽上传LRC文件</span>
+                    <span class="text-gray-500 text-sm mt-1">支持格式: .lrc</span>
+                    <span id="lyricsFileName" class="text-primary text-sm mt-2 hidden"></span>
+                    <input type="file" id="lyricsFile" name="lyricsFile" accept=".lrc" class="hidden">
+                </label>
+            </div>
+
+            <!-- 封面图片上传 -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">封面图片 (可选)</label>
+                <label for="coverImage" id="coverImageLabel" class="file-input-label flex flex-col items-center justify-center p-6 rounded-lg cursor-pointer">
+                    <i class="fa fa-image text-4xl text-gray-400 mb-2"></i>
+                    <span class="text-gray-600 font-medium">点击或拖拽上传封面图片</span>
+                    <span class="text-gray-500 text-sm mt-1">支持格式: .jpg, .png</span>
+                    <span id="coverImageName" class="text-primary text-sm mt-2 hidden"></span>
+                    <input type="file" id="coverImage" name="coverImage" accept=".jpg,.jpeg,.png" class="hidden">
+                </label>
+            </div>
+
+            <!-- 提交按钮 -->
+            <div class="pt-4">
+                <button type="submit" class="w-full bg-primary hover:bg-primary/90 text-white py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center">
+                    <i class="fa fa-upload mr-2"></i> 上传音乐
+                </button>
+            </div>
+        </form>
+    </section>`
+                // 重新初始化表单相关JS
+                initUploadForm();
+                break;
+
+            case 'pending':
+                // 审核中状态
+                mainContent.innerHTML = `
+                <div class="text-center py-20 max-w-2xl mx-auto">
+                    <div class="inline-flex items-center justify-center w-20 h-20 bg-blue-100 rounded-full mb-6">
+                        <i class="fa fa-hourglass-half text-3xl text-blue-600"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold mb-4">您的音乐人申请正在审核中</h2>
+                    <p class="text-gray-600 mb-6">
+                        我们正在认真审核您的资料，通常需要1-3个工作日。<br>
+                        审核通过后，您将可以上传音乐作品。
+                    </p>
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-left">
+                        <h4 class="font-medium text-blue-800 mb-2 flex items-center">
+                            <i class="fa fa-lightbulb-o mr-2"></i> 审核期间建议
+                        </h4>
+                        <ul class="list-disc list-inside text-gray-700 space-y-1">
+                            <li>完善个人资料中的音乐人信息</li>
+                            <li>准备高质量的原创音乐作品</li>
+                            <li>阅读我们的<a href="/guide" class="text-primary hover:underline">上传指南</a></li>
+                        </ul>
+                    </div>
+                    <button onclick="location.reload()" class="bg-gray-100 hover:bg-gray-200 px-6 py-2 rounded-lg transition-colors">
+                        <i class="fa fa-refresh mr-2"></i>刷新状态
+                    </button>
+                </div>
+            `;
+                break;
+
+            case 'normal':
+            default:
+                // 普通用户状态
+                mainContent.innerHTML = `
+                <div class="text-center py-20">
+                    <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-primary to-accent rounded-full mb-6">
+                        <i class="fa fa-microphone text-3xl text-white"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold mb-4">成为音乐人，分享你的音乐</h2>
+                    <p class="text-gray-600 mb-8 max-w-lg mx-auto">
+                        您需要成为认证音乐人才能上传作品。认证后，您的作品将被数百万用户发现！
+                    </p>
+
+                    <div class="grid md:grid-cols-3 gap-6 mb-8 max-w-4xl mx-auto">
+                        <div class="bg-white p-6 rounded-xl shadow-sm">
+                            <div class="text-accent text-2xl mb-3"><i class="fa fa-upload"></i></div>
+                            <h3 class="font-bold mb-2">上传作品</h3>
+                            <p class="text-gray-600 text-sm">发布你的原创或翻唱音乐</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-sm">
+                            <div class="text-accent text-2xl mb-3"><i class="fa fa-users"></i></div>
+                            <h3 class="font-bold mb-2">建立粉丝群</h3>
+                            <p class="text-gray-600 text-sm">让更多人发现你的音乐</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-sm">
+                            <div class="text-accent text-2xl mb-3"><i class="fa fa-line-chart"></i></div>
+                            <h3 class="font-bold mb-2">数据分析</h3>
+                            <p class="text-gray-600 text-sm">了解听众喜好和增长趋势</p>
+                        </div>
+                    </div>
+
+                    <div class="space-x-4">
+                        <a href="/apply-musician" class="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-lg inline-flex items-center">
+                            <i class="fa fa-pencil-square-o mr-2"></i> 立即申请
+                        </a>
+                        <a href="/musician-benefits" class="text-primary hover:underline inline-flex items-center">
+                            了解音乐人权益 <i class="fa fa-angle-right ml-1"></i>
+                        </a>
+                    </div>
+                </div>
+            `;
+                break;
+        }
+    }
+
+    // 错误状态处理
+    function showErrorState() {
+        document.querySelector('main').innerHTML = `
+        <div class="text-center py-20">
+            <div class="inline-flex items-center justify-center w-20 h-20 bg-red-100 rounded-full mb-6">
+                <i class="fa fa-exclamation-triangle text-3xl text-red-600"></i>
+            </div>
+            <h2 class="text-2xl font-bold mb-4">无法获取音乐人状态</h2>
+            <p class="text-gray-600 mb-8">
+                我们暂时无法验证您的音乐人状态，请稍后再试。
+            </p>
+            <div class="space-x-4">
+                <button onclick="checkMusicianStatus(${auth.getUserInfo().userId})" class="bg-primary hover:bg-primary/90 text-white px-6 py-2 rounded-lg">
+                    <i class="fa fa-refresh mr-2"></i> 重试
+                </button>
+                <a href="/help" class="text-gray-600 hover:underline">
+                    <i class="fa fa-question-circle mr-1"></i> 获取帮助
+                </a>
+            </div>
+        </div>
+    `;
+    }
+
+
+    function initUploadForm() {
+        // 显示欢迎信息
+        document.getElementById('welcomeUsername').textContent = userInfo.username || '音乐爱好者';
+
+        // 退出登录功能
+        document.getElementById('logoutBtn').addEventListener('click', async function() {
+            console.log("退出登录");
+            if (confirm('确定要退出登录吗？')) {
+                // 调用auth的logout方法
+                if (typeof auth !== 'undefined' && auth.logout) {
+                    await auth.logout();
+                }
+            }
+        });
+
+        // 歌手ID输入验证
+        const singerIdInput = document.getElementById('singerId');
+        const singerIdPattern = /^(\d+;)*\d+$/; // 允许数字和分号，且分号不能连续或在首尾
+
+        singerIdInput.addEventListener('input', function() {
+            // 移除非数字和非分号的字符
+            this.value = this.value.replace(/[^\d;]/g, '');
+
+            // 验证格式（分号不能连续或在首尾）
+            if (!singerIdPattern.test(this.value) && this.value !== '') {
+                this.setCustomValidity('格式错误，只能包含数字和分号，且分号不能连续或在首尾');
+            } else {
+                this.setCustomValidity('');
+            }
+        });
+        // 文件上传处理
+        const musicFileInput = document.getElementById('musicFile');
+        const lyricsFileInput = document.getElementById('lyricsFile');
+        const coverImageInput = document.getElementById('coverImage');
+
+        // 音乐文件上传处理
+        musicFileInput.addEventListener('change', function(e) {
+            if (this.files.length > 0) {
+                document.getElementById('musicFileName').textContent = this.files[0].name;
+                document.getElementById('musicFileName').classList.remove('hidden');
+                document.getElementById('musicFileLabel').classList.add('border-primary');
+            }
+        });
+
+        // 歌词文件上传处理
+        lyricsFileInput.addEventListener('change', function(e) {
+            if (this.files.length > 0) {
+                document.getElementById('lyricsFileName').textContent = this.files[0].name;
+                document.getElementById('lyricsFileName').classList.remove('hidden');
+                document.getElementById('lyricsFileLabel').classList.add('border-primary');
+            }
+        });
+
+        // 封面图片上传处理
+        coverImageInput.addEventListener('change', function(e) {
+            if (this.files.length > 0) {
+                document.getElementById('coverImageName').textContent = this.files[0].name;
+                document.getElementById('coverImageName').classList.remove('hidden');
+                document.getElementById('coverImageLabel').classList.add('border-primary');
+
+                // 预览图片
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    document.getElementById('coverImageLabel').style.backgroundImage = `url(${event.target.result})`;
+                    document.getElementById('coverImageLabel').style.backgroundSize = 'cover';
+                    document.getElementById('coverImageLabel').style.backgroundPosition = 'center';
+                    document.querySelector('#coverImageLabel i').classList.add('hidden');
+                    document.querySelector('#coverImageLabel span:nth-of-type(1)').classList.add('hidden');
+                    document.querySelector('#coverImageLabel span:nth-of-type(2)').classList.add('hidden');
+                };
+                reader.readAsDataURL(this.files[0]);
+            }
+        });
+
+        // 拖拽上传功能
+        function setupDragDrop(labelId, inputId) {
+            const label = document.getElementById(labelId);
+            const input = document.getElementById(inputId);
+
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                label.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                label.addEventListener(eventName, highlight, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                label.addEventListener(eventName, unhighlight, false);
+            });
+
+            function highlight() {
+                label.classList.add('drag-over');
+            }
+
+            function unhighlight() {
+                label.classList.remove('drag-over');
+            }
+
+            label.addEventListener('drop', handleDrop, false);
+
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                input.files = files;
+
+                // 触发change事件
+                const event = new Event('change');
+                input.dispatchEvent(event);
+            }
+        }
+
+        // 设置拖拽上传
+        setupDragDrop('musicFileLabel', 'musicFile');
+        setupDragDrop('lyricsFileLabel', 'lyricsFile');
+        setupDragDrop('coverImageLabel', 'coverImage');
+
+        // 表单提交处理
+        document.getElementById('uploadForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            // 验证表单
+            const songName = document.getElementById('songName').value;
+            const singerId = document.getElementById('singerId').value;
+            const duration = document.getElementById('duration').value;
+            const musicFile = document.getElementById('musicFile').files[0];
+
+
+            if (!songName || !singerId || !duration || !musicFile) {
+                alert('请填写所有必填字段！');
+                return;
+            }
+
+            // 验证时长格式
+            if (!/^\d{1,2}:\d{2}$/.test(duration)) {
+                alert('时长格式不正确，请使用 mm:ss 格式');
+                return;
+            }
+
+            // 验证歌手ID格式
+            if (!singerIdPattern.test(singerId) && singerId !== '') {
+                alert('歌手ID格式错误，只能包含数字和分号，且分号不能连续或在首尾');
+                return;
+            }
+
+            // 提取歌手ID数组
+            const singerIds = singerId.split(';').map(id => parseInt(id, 10));
+
+            // 创建FormData对象
+            const formData = new FormData();
+            formData.append('songName', songName);
+            singerIds.forEach((id, index) => {
+                formData.append(`singerIds[${index}]`, id.toString()); // 以字符串传递，后端转BigInt
+            });
+            formData.append('duration', duration);
+            formData.append('musicFile', musicFile);
+
+            const album = document.getElementById('album').value;
+            if (album) formData.append('album', album);
+
+            const lyricsFile = document.getElementById('lyricsFile').files[0];
+            if (lyricsFile) formData.append('lyricsFile', lyricsFile);
+
+            const coverImage = document.getElementById('coverImage').files[0];
+            if (coverImage) formData.append('coverImage', coverImage);
+
+            // 显示上传中状态
+            const submitBtn = document.querySelector('#uploadForm button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i> 上传中...';
+            submitBtn.disabled = true;
+
+            // 模拟上传请求
+            setTimeout(() => {
+                // 这里应该是实际的axios上传请求
+                // axios.post('/api/upload', formData, {
+                //     headers: {
+                //         'Content-Type': 'multipart/form-data'
+                //     }
+                // })
+                // .then(response => {
+                //     alert('上传成功！');
+                //     this.reset();
+                // })
+                // .catch(error => {
+                //     alert('上传失败: ' + error.message);
+                // })
+                // .finally(() => {
+                //     submitBtn.innerHTML = originalText;
+                //     submitBtn.disabled = false;
+                // });
+
+                // 模拟成功响应
+                alert('上传成功！');
+                this.reset();
+                document.getElementById('musicFileName').classList.add('hidden');
+                document.getElementById('lyricsFileName').classList.add('hidden');
+                document.getElementById('coverImageName').classList.add('hidden');
+                document.getElementById('musicFileLabel').classList.remove('border-primary');
+                document.getElementById('lyricsFileLabel').classList.remove('border-primary');
+                document.getElementById('coverImageLabel').classList.remove('border-primary');
+                document.getElementById('coverImageLabel').style.backgroundImage = 'none';
+                document.querySelector('#coverImageLabel i').classList.remove('hidden');
+                document.querySelector('#coverImageLabel span:nth-of-type(1)').classList.remove('hidden');
+                document.querySelector('#coverImageLabel span:nth-of-type(2)').classList.remove('hidden');
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }, 1500);
+        });
+    }
+</script>
+</body>
+</html>

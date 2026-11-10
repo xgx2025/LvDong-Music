@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <!--  依赖和脚本在引导页中  -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>律动音乐-哼唱识曲</title>
+    <script src="../static/js/config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="../static/js/axios-config.js"></script>
+<!--    <script src="static/js/auth.js" defer></script>-->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        const base = document.createElement('base');
+        base.href = `http://${SERVER_IP}/xgxmusic/`;
+        document.head.appendChild(base);
+    </script>
+
+    <!-- Tailwind 配置 - 优化后的颜色方案 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1c42df',  // 蓝色
+                        secondary: '#3BECB4', // 更清新的绿色
+                        accent: '#2EC4B6',  // 蓝绿色(点缀色)
+                        accent2: '#FFB74D',  // 橙色点缀色
+                        dark: '#1E293B',
+                        light: '#F8FAFC',
+                        glass: 'rgba(255, 255, 255, 0.15)' // 透明玻璃效果
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                    },
+                },
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .text-shadow {
+                text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .bg-gradient-music {
+                background: linear-gradient(135deg, #4A6CF7 0%, #3BECB4 100%);
+            }
+            .glass-effect {
+                backdrop-filter: blur(10px);
+                background-color: rgba(255, 255, 255, 0.15);
+            }
+            .scrollbar-hide::-webkit-scrollbar {
+                display: none;
+            }
+            .album-hover {
+                transition: transform 0.3s ease, box-shadow 0.3s ease;
+            }
+            .album-hover:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+            }
+            .hover-accent:hover {
+                color: #2EC4B6;
+            }
+            .hover-accent2:hover {
+                color: #FFB74D;
+            }
+            .bg-card {
+                background-color: rgba(255, 255, 255, 0.3);
+            }
+            .pulse-animation {
+                animation: pulse 2s infinite;
+            }
+            @keyframes pulse {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.05); }
+                100% { transform: scale(1); }
+            }
+            .waveform {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                height: 60px;
+                width: 100%;
+            }
+            .waveform-bar {
+                background-color: #2EC4B6;
+                width: 4px;
+                border-radius: 2px;
+                transition: height 0.2s ease;
+            }
+        }
+    </style>
+</head>
+<body class="font-inter bg-gradient-to-br from-blue-50 to-green-50 text-gray-800 min-h-screen">
+<!-- 背景 -->
+<div class="fixed inset-0 -z-10">
+    <div class="absolute inset-0 bg-gradient-music opacity-30"></div>
+    <div class="absolute inset-0 bg-white/20"></div>
+</div>
+
+<!-- 顶部导航 -->
+<header class="fixed top-0 left-0 right-0 z-50 p-4 glass-effect border-b border-white/30">
+    <div class="container mx-auto flex justify-between items-center">
+        <!-- 品牌标识 -->
+        <div class="flex items-center">
+            <div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mr-2">
+                <i class="fa fa-music text-primary"></i>
+            </div>
+            <h1 class="text-xl font-bold text-gray-800">律动</h1>
+        </div>
+
+        <!-- 搜索栏 -->
+        <div class="relative max-w-md w-full mx-4 block">
+            <input type="text" placeholder="搜索歌曲、歌手或专辑..."
+                   class="w-full pl-10 pr-4 py-2 rounded-full bg-white/50 border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all text-gray-700">
+            <i class="fa fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"></i>
+        </div>
+
+        <!-- 导航菜单 -->
+        <nav>
+            <ul class="flex space-x-6 items-center">
+                <li><a href="../home.html" class="text-gray-700 hover:text-primary transition-colors"><i class="fa fa-home mr-1"></i>首页</a></li>
+                <li><a href="../humming-recognition.html" class="text-primary border-b-2 border-primary pb-1"><i class="fa fa-microphone mr-1"></i>哼唱识曲</a></li>
+                <li><a href="../upload-music.html" class="text-gray-700 hover:text-primary transition-colors"><i class="fa fa-upload mr-1"></i>上传</a></li>
+                <li><a href="../user-profile.html" class="text-gray-700 hover:text-primary transition-colors"><i class="fa fa-user mr-1"></i>我的</a></li>
+                <li>
+                    <button id="logoutBtn" class="text-gray-700 hover:text-accent transition-colors">
+                        <i class="fa fa-sign-out"></i>
+                    </button>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</header>
+
+<!-- 主内容区 -->
+<main class="container mx-auto pt-24 pb-32 px-4">
+    <!-- 哼唱识曲主区域 -->
+    <section class="max-w-2xl mx-auto">
+        <!-- 标题和说明 -->
+        <div class="text-center mb-10">
+            <h2 class="text-3xl font-bold text-gray-800 mb-3">哼唱识曲</h2>
+            <p class="text-gray-600">哼唱或吹口哨，找到你想要的歌曲</p>
+        </div>
+
+        <!-- 录音区域 -->
+        <div id="recording-section" class="bg-white rounded-2xl shadow-xl overflow-hidden">
+            <!-- 录音状态显示 -->
+            <div id="recording-status" class="p-6 text-center">
+                <div class="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white pulse-animation">
+                    <i class="fa fa-microphone text-3xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-800 mb-2">点击开始录音</h3>
+                <p class="text-gray-600 mb-6">请哼唱或吹口哨10-20秒</p>
+
+                <!-- 波形图 -->
+                <div id="waveform" class="waveform mb-6 hidden">
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
+                </div>
+
+                <!-- 录音按钮 -->
+                <button id="record-btn" class="bg-primary hover:bg-primary/90 text-white font-medium py-3 px-8 rounded-full transition-all">
+                    <i class="fa fa-microphone mr-2"></i>开始录音
+                </button>
+
+                <!-- 录音计时 -->
+                <div id="recording-timer" class="mt-4 text-gray-600 hidden">
+                    <span id="timer-minutes">00</span>:<span id="timer-seconds">00</span>
+                </div>
+            </div>
+
+            <!-- 识别结果区域 - 初始隐藏 -->
+            <div id="recognition-result" class="p-6 hidden">
+                <div class="text-center mb-6">
+                    <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center text-green-500">
+                        <i class="fa fa-check text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-2">识别成功</h3>
+                    <p class="text-gray-600">我们找到了匹配的歌曲</p>
+                </div>
+
+                <!-- 识别结果卡片 -->
+                <div id="result-card" class="bg-card rounded-xl p-4 flex items-center">
+                    <img id="result-album-cover" src="https://picsum.photos/100/100?random=50" alt="专辑封面" class="w-16 h-16 rounded-lg mr-4">
+                    <div class="flex-1 min-w-0">
+                        <h4 id="result-song-name" class="font-bold text-gray-800 truncate">歌曲名称</h4>
+                        <p id="result-singer" class="text-gray-600 text-sm truncate">歌手名称</p>
+                        <p id="result-album" class="text-gray-500 text-xs truncate">专辑名称</p>
+                    </div>
+                    <button id="play-btn" class="ml-4 w-12 h-12 rounded-full bg-accent flex items-center justify-center text-white hover:bg-accent/90 transition-all">
+                        <i class="fa fa-play ml-1"></i>
+                    </button>
+                </div>
+
+                <!-- 重新录音按钮 -->
+                <div class="mt-6 text-center">
+                    <button id="re-record-btn" class="text-primary hover:text-primary/80 font-medium">
+                        <i class="fa fa-refresh mr-2"></i>重新识别
+                    </button>
+                </div>
+            </div>
+
+            <!-- 识别失败区域 - 初始隐藏 -->
+            <div id="recognition-fail" class="p-6 hidden">
+                <div class="text-center mb-6">
+                    <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center text-red-500">
+                        <i class="fa fa-times text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-2">识别失败</h3>
+                    <p class="text-gray-600 mb-4">未能找到匹配的歌曲，请再试一次</p>
+                    <button id="try-again-btn" class="bg-primary hover:bg-primary/90 text-white font-medium py-2 px-6 rounded-full transition-all">
+                        <i class="fa fa-microphone mr-2"></i>再试一次
+                    </button>
+                </div>
+
+                <!-- 提示信息 -->
+                <div class="bg-blue-50 rounded-lg p-4 text-sm text-gray-700">
+                    <h4 class="font-bold text-blue-800 mb-2"><i class="fa fa-lightbulb-o mr-2"></i>识别小技巧</h4>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li>尽量在安静的环境中哼唱</li>
+                        <li>哼唱主旋律部分，时长10-20秒</li>
+                        <li>保持稳定的节奏和音调</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 使用说明 -->
+        <div class="mt-10 bg-white/50 rounded-xl p-6">
+            <h3 class="text-lg font-bold text-gray-800 mb-4"><i class="fa fa-question-circle text-primary mr-2"></i>如何使用哼唱识曲</h3>
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="flex items-start">
+                    <div class="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
+                        <span class="font-bold">1</span>
+                    </div>
+                    <div>
+                        <h4 class="font-medium text-gray-800">点击录音按钮</h4>
+                        <p class="text-gray-600 text-sm">开始哼唱或吹口哨</p>
+                    </div>
+                </div>
+                <div class="flex items-start">
+                    <div class="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
+                        <span class="font-bold">2</span>
+                    </div>
+                    <div>
+                        <h4 class="font-medium text-gray-800">哼唱10-20秒</h4>
+                        <p class="text-gray-600 text-sm">尽量哼唱歌曲的主旋律部分</p>
+                    </div>
+                </div>
+                <div class="flex items-start">
+                    <div class="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
+                        <span class="font-bold">3</span>
+                    </div>
+                    <div>
+                        <h4 class="font-medium text-gray-800">停止录音</h4>
+                        <p class="text-gray-600 text-sm">系统将自动分析您哼唱的旋律</p>
+                    </div>
+                </div>
+                <div class="flex items-start">
+                    <div class="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
+                        <span class="font-bold">4</span>
+                    </div>
+                    <div>
+                        <h4 class="font-medium text-gray-800">查看结果</h4>
+                        <p class="text-gray-600 text-sm">系统将显示匹配的歌曲信息</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<!-- 底部播放器（固定在底部） -->
+<div class="fixed bottom-0 left-0 right-0 glass-effect border-t border-white/30 z-50">
+    <div class="container mx-auto px-4">
+        <div class="flex items-center justify-between h-20">
+            <!-- 当前播放歌曲信息 -->
+            <div class="flex items-center w-1/3">
+                <img src="https://picsum.photos/100/100?random=40" alt="当前播放" class="w-12 h-12 rounded mr-3">
+                <div class="min-w-0">
+                    <h4 class="font-medium text-sm truncate text-gray-800">追光者</h4>
+                    <p class="text-gray-600 text-xs truncate">岑宁儿</p>
+                </div>
+                <button class="ml-4 text-gray-600 hover:text-accent transition-colors">
+                    <i class="fa fa-heart-o"></i>
+                </button>
+            </div>
+
+            <!-- 播放控制 -->
+            <div class="flex flex-col items-center justify-center w-1/3">
+                <div class="flex items-center space-x-6 mb-2">
+                    <button class="text-gray-600 hover:text-accent transition-colors">
+                        <i class="fa fa-random"></i>
+                    </button>
+                    <button class="text-gray-600 hover:text-accent transition-colors">
+                        <i class="fa fa-step-backward"></i>
+                    </button>
+                    <button class="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-white hover:bg-accent/90 transition-all">
+                        <i class="fa fa-pause ml-0.5"></i>
+                    </button>
+                    <button class="text-gray-600 hover:text-accent transition-colors">
+                        <i class="fa fa-step-forward"></i>
+                    </button>
+                    <button class="text-gray-600 hover:text-accent transition-colors">
+                        <i class="fa fa-repeat"></i>
+                    </button>
+                </div>
+                <div class="flex items-center w-full max-w-md">
+                    <span class="text-xs text-gray-600 mr-2">1:23</span>
+                    <div class="flex-1 h-1 bg-gray-300 rounded-full overflow-hidden">
+                        <div class="h-full w-1/3 bg-accent rounded-full relative">
+                            <div class="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white shadow"></div>
+                        </div>
+                    </div>
+                    <span class="text-xs text-gray-600 ml-2">3:55</span>
+                </div>
+            </div>
+
+            <!-- 音量控制 -->
+            <div class="flex items-center justify-end w-1/3">
+                <button class="text-gray-600 hover:text-accent transition-colors mr-2">
+                    <i class="fa fa-list"></i>
+                </button>
+                <div class="hidden md:flex items-center">
+                    <button class="text-gray-600 hover:text-accent transition-colors mr-2">
+                        <i class="fa fa-volume-up"></i>
+                    </button>
+                    <div class="w-20 h-1 bg-gray-300 rounded-full overflow-hidden">
+                        <div class="h-full w-2/3 bg-gray-400 rounded-full"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript -->
+<script>
+    // 页面加载时验证登录状态并获取用户信息
+    document.addEventListener('DOMContentLoaded', function() {
+        const userInfo = auth.getUserInfo();
+        if (auth.isAuthenticated()) {
+            // 已登录，显示登录成功内容
+            console.log('通过验证');
+        } else {
+            window.location.href='login.html';
+        }
+
+        // 显示欢迎信息
+        document.getElementById('welcomeUsername').textContent = userInfo.username || '音乐爱好者';
+
+        // 退出登录功能
+        document.getElementById('logoutBtn').addEventListener('click', async function() {
+            console.log("退出登录");
+            if (confirm('确定要退出登录吗？')) {
+                // 调用auth的logout方法
+                if (typeof auth !== 'undefined' && auth.logout) {
+                    await auth.logout();
+                }
+            }
+        });
+
+        // 哼唱识曲功能
+        const recordBtn = document.getElementById('record-btn');
+        const reRecordBtn = document.getElementById('re-record-btn');
+        const tryAgainBtn = document.getElementById('try-again-btn');
+        const playBtn = document.getElementById('play-btn');
+        const waveform = document.getElementById('waveform');
+        const waveformBars = document.querySelectorAll('.waveform-bar');
+        const recordingTimer = document.getElementById('recording-timer');
+        const timerMinutes = document.getElementById('timer-minutes');
+        const timerSeconds = document.getElementById('timer-seconds');
+        const recordingStatus = document.getElementById('recording-status');
+        const recognitionResult = document.getElementById('recognition-result');
+        const recognitionFail = document.getElementById('recognition-fail');
+
+        let isRecording = false;
+        let timerInterval;
+        let seconds = 0;
+
+        // 模拟波形动画
+        function animateWaveform() {
+            waveformBars.forEach(bar => {
+                const randomHeight = Math.floor(Math.random() * 30) + 10;
+                bar.style.height = `${randomHeight}px`;
+            });
+        }
+
+        // 更新计时器
+        function updateTimer() {
+            seconds++;
+            const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const secs = (seconds % 60).toString().padStart(2, '0');
+            timerMinutes.textContent = mins;
+            timerSeconds.textContent = secs;
+
+            // 自动停止在20秒
+            if (seconds >= 20) {
+                stopRecording();
+            }
+        }
+
+        // 开始录音
+        function startRecording() {
+            isRecording = true;
+            seconds = 0;
+            recordBtn.innerHTML = '<i class="fa fa-stop mr-2"></i>停止录音';
+            recordBtn.classList.remove('bg-primary');
+            recordBtn.classList.add('bg-accent2');
+            waveform.classList.remove('hidden');
+            recordingTimer.classList.remove('hidden');
+
+            // 开始计时
+            timerInterval = setInterval(updateTimer, 1000);
+
+            // 开始波形动画
+            const waveformInterval = setInterval(animateWaveform, 100);
+
+            // 模拟录音过程
+            setTimeout(() => {
+                if (isRecording) {
+                    stopRecording();
+                    clearInterval(waveformInterval);
+                }
+            }, 5000); // 5秒后自动停止（模拟）
+        }
+
+        // 停止录音
+        function stopRecording() {
+            isRecording = false;
+            clearInterval(timerInterval);
+            recordBtn.innerHTML = '<i class="fa fa-microphone mr-2"></i>开始录音';
+            recordBtn.classList.add('bg-primary');
+            recordBtn.classList.remove('bg-accent2');
+            waveform.classList.add('hidden');
+
+            // 模拟API请求延迟
+            setTimeout(() => {
+                recordingStatus.classList.add('hidden');
+
+                // 随机显示成功或失败结果（模拟）
+                if (Math.random() > 0.3) { // 70%成功率
+                    recognitionResult.classList.remove('hidden');
+
+                    // 模拟识别结果数据
+                    const mockResults = [
+                        { song: '知我', singer: '国风堂;峨漏', album: '《知我》原声带', cover: 'static/images/songCovers/123456.png' },
+                        { song: '起风了', singer: '买辣椒也用券', album: '《起风了》', cover: 'https://picsum.photos/100/100?random=32' },
+                        { song: '大鱼', singer: '周深', album: '《大鱼海棠》原声带', cover: 'https://picsum.photos/100/100?random=33' },
+                        { song: '年少有为', singer: '李荣浩', album: '《耳朵》', cover: 'https://picsum.photos/100/100?random=34' }
+                    ];
+
+                    const result = mockResults[Math.floor(Math.random() * mockResults.length)];
+                    document.getElementById('result-song-name').textContent = result.song;
+                    document.getElementById('result-singer').textContent = result.singer;
+                    document.getElementById('result-album').textContent = result.album;
+                    document.getElementById('result-album-cover').src = result.cover;
+                } else {
+                    recognitionFail.classList.remove('hidden');
+                }
+            }, 1500);
+        }
+
+        // 重新录音
+        function resetRecording() {
+            recordingStatus.classList.remove('hidden');
+            recognitionResult.classList.add('hidden');
+            recognitionFail.classList.add('hidden');
+            recordingTimer.classList.add('hidden');
+            seconds = 0;
+            timerMinutes.textContent = '00';
+            timerSeconds.textContent = '00';
+        }
+
+        // 事件监听
+        recordBtn.addEventListener('click', function() {
+            if (isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        });
+
+        reRecordBtn.addEventListener('click', resetRecording);
+        tryAgainBtn.addEventListener('click', resetRecording);
+
+        playBtn.addEventListener('click', function() {
+            const songData = {
+                songName: document.getElementById('result-song-name').textContent,
+                singerName: document.getElementById('result-singer').textContent,
+                album: document.getElementById('result-album').textContent,
+                cover: document.getElementById('result-album-cover').src
+            };
+
+            localStorage.setItem('playSongData', JSON.stringify(songData));
+            window.open('player.html', '_blank');
+        });
+
+        // 搜索功能
+        const searchInput = document.querySelector('header input[type="text"]');
+        let searchTimer = null;
+
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                clearTimeout(searchTimer);
+                const keyword = e.target.value.trim();
+                if (keyword) {
+                    executeSearch(keyword);
+                }
+            }
+        });
+
+        const searchIcon = document.querySelector('header .fa-search');
+        searchIcon.addEventListener('click', function() {
+            const keyword = searchInput.value.trim();
+            if (keyword) {
+                executeSearch(keyword);
+            }
+        });
+    });
+
+    function executeSearch(keyword) {
+        const newUrl = `search.html?q=${encodeURIComponent(keyword)}`;
+        window.location.href = newUrl;
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>律动音乐-搜索结果</title>
+    <link rel="icon" href="static/favicon-512.png" sizes="512x512" type="image/png">
+    <!--    <script>-->
+    <!--        setInterval(() => {-->
+    <!--            if(navigator.webdriver || window.outerWidth - window.innerWidth > 200){-->
+    <!--                document.body.innerHTML = '<h1>阻止了非法访问</h1>';-->
+    <!--                window.stop();-->
+    <!--            }-->
+    <!--        }, 1000);-->
+    <!--        document.addEventListener('contextmenu', e => e.preventDefault());-->
+    <!--        document.onkeydown = function(e) {-->
+    <!--            if(e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) {-->
+    <!--                return false;-->
+    <!--            }-->
+    <!--        };-->
+    <!--        document.addEventListener('keydown', (e) => {-->
+    <!--            if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.code === 'KeyI')) {-->
+    <!--                e.preventDefault();-->
+    <!--            }-->
+    <!--        });-->
+    <!--    </script>-->
+    <script src="static/js/config.js"></script>
+    <script src="static/js/utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="static/js/axios-config.js"></script>
+    <script src="static/js/auth.js" defer></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        const base = document.createElement('base');
+        base.href = `http://${SERVER_IP}/xgxmusic/`;
+        document.head.appendChild(base);
+    </script>
+    <!-- Tailwind 配置 - 优化后的颜色方案 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1c42df',  // 蓝色
+                        secondary: '#3BECB4', // 更清新的绿色
+                        accent: '#2EC4B6',  // 蓝绿色(点缀色)
+                        accent2: '#FFB74D',  // 橙色点缀色
+                        dark: '#1E293B',
+                        light: '#F8FAFC',
+                        glass: 'rgba(255, 255, 255, 0.15)' // 透明玻璃效果
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                    },
+                },
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .bg-gradient-music {
+                background: linear-gradient(135deg, #4A6CF7 0%, #3BECB4 100%);
+            }
+            .glass-effect {
+                backdrop-filter: blur(10px);
+                background-color: rgba(255, 255, 255, 0.15);
+            }
+        }
+    </style>
+</head>
+<body class="font-inter bg-gradient-to-br from-blue-50 to-green-50 text-gray-800 min-h-screen">
+<!-- 背景 -->
+<div class="fixed inset-0 -z-10">
+    <div class="absolute inset-0 bg-gradient-music opacity-30"></div>
+    <div class="absolute inset-0 bg-white/20"></div>
+</div>
+
+<!-- 顶部导航 -->
+<header class="fixed top-0 left-0 right-0 z-50 p-4 glass-effect border-b border-white/30">
+    <div class="container mx-auto flex justify-between items-center">
+        <!-- 品牌标识 -->
+        <div class="flex items-center">
+            <div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mr-2">
+                <i class="fa fa-music text-primary"></i>
+            </div>
+            <h1 class="text-xl font-bold text-gray-800">律动</h1>
+        </div>
+
+        <!-- 搜索栏 -->
+        <div class="relative max-w-md w-full mx-4">
+            <input type="text" placeholder="搜索歌曲、歌手或专辑..."
+                   class="w-full pl-10 pr-4 py-2 rounded-full bg-white/50 border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all text-gray-700">
+            <i class="fa fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"></i>
+        </div>
+
+        <!-- 导航菜单 -->
+        <nav>
+            <ul class="flex space-x-6 items-center">
+                <li><a href="home.html" class="text-gray-700 hover:text-primary transition-colors"><i class="fa fa-home mr-1"></i>首页</a></li>
+                <li><a href="user-profile.html" class="text-gray-700 hover:text-primary transition-colors"><i class="fa fa-user mr-1"></i>我的</a></li>
+                <li>
+                    <button id="logoutBtn" class="text-gray-700 hover:text-accent transition-colors">
+                        <i class="fa fa-sign-out"></i>
+                    </button>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</header>
+
+<!-- 主内容区 -->
+<main class="container mx-auto pt-24 pb-32 px-4">
+    <!-- 搜索结果标题 -->
+    <section class="mb-8">
+        <h2 class="text-2xl font-bold text-gray-800" id="searchTitle">搜索结果</h2>
+        <div class="flex items-center mt-4 text-sm text-gray-600">
+            <span class="mr-4">找到 <span class="text-primary font-bold" id="songCount">0</span> 首歌曲</span>
+            <span class="mr-4"><span class="text-primary font-bold" id="albumCount">0</span> 张专辑</span>
+            <span><span class="text-primary font-bold" id="artistCount">0</span> 位歌手</span>
+        </div>
+    </section>
+
+    <!-- 搜索结果分类导航 -->
+    <section class="mb-8">
+        <div class="flex space-x-6 border-b border-gray-200">
+            <button class="pb-3 px-1 border-b-2 border-primary text-primary font-medium" data-tab="songs">歌曲</button>
+            <button class="pb-3 px-1 text-gray-600 hover:text-primary transition-colors" data-tab="albums">专辑</button>
+            <button class="pb-3 px-1 text-gray-600 hover:text-primary transition-colors" data-tab="artists">歌手</button>
+            <button class="pb-3 px-1 text-gray-600 hover:text-primary transition-colors" data-tab="playlists">歌单</button>
+            <button class="pb-3 px-1 text-gray-600 hover:text-primary transition-colors" data-tab="videos">MV</button>
+        </div>
+    </section>
+
+    <!-- 歌曲结果 -->
+    <section class="result-section active" id="songs-section">
+        <div class="glass-effect rounded-xl border border-white/30 overflow-hidden">
+            <table class="w-full songs-table">
+                <thead>
+                <tr class="border-b border-white/20">
+                    <th class="text-left py-4 px-6 w-12 text-gray-700">#</th>
+                    <th class="text-left py-4 px-6 text-gray-700">歌曲</th>
+                    <th class="text-left py-4 px-6 hidden md:table-cell text-gray-700">歌手</th>
+                    <th class="text-left py-4 px-6 hidden lg:table-cell text-gray-700">专辑</th>
+                    <th class="text-right py-4 px-6 text-gray-700">时长</th>
+                </tr>
+                </thead>
+                <tbody id="songs-list">
+                <!-- 歌曲将通过JavaScript动态渲染 -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 分页控件 -->
+        <div class="flex justify-center mt-8">
+            <nav class="inline-flex rounded-md shadow" id="pagination">
+                <!-- 分页将通过JavaScript动态渲染 -->
+            </nav>
+        </div>
+    </section>
+
+    <!-- 专辑结果 -->
+    <section class="result-section hidden" id="albums-section">
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4" id="albums-list">
+            <!-- 专辑将通过JavaScript动态渲染 -->
+        </div>
+    </section>
+
+    <!-- 歌手结果 -->
+    <section class="result-section hidden" id="artists-section">
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4" id="artists-list">
+            <!-- 歌手将通过JavaScript动态渲染 -->
+        </div>
+    </section>
+
+    <!-- 加载状态 -->
+    <div id="loading" class="text-center py-8 hidden">
+        <i class="fa fa-spinner fa-spin text-2xl text-primary"></i>
+        <p class="mt-2 text-gray-600">正在加载搜索结果...</p>
+    </div>
+
+    <!-- 空状态 -->
+    <div id="empty-state" class="text-center py-12 hidden">
+        <i class="fa fa-search text-3xl text-gray-400"></i>
+        <h3 class="mt-4 text-lg font-medium text-gray-700">没有找到相关结果</h3>
+        <p class="mt-1 text-gray-500">尝试不同的关键词或减少筛选条件</p>
+    </div>
+</main>
+
+<!-- 底部播放器（与home.html相同） -->
+<div class="fixed bottom-0 left-0 right-0 glass-effect border-t border-white/30 z-50">
+    <div class="container mx-auto px-4">
+        <div class="flex items-center justify-between h-20">
+            <!-- 当前播放歌曲信息 -->
+            <div class="flex items-center w-1/3">
+                <img src="https://picsum.photos/100/100?random=40" alt="当前播放" class="w-12 h-12 rounded mr-3">
+                <div class="min-w-0">
+                    <h4 class="font-medium text-sm truncate text-gray-800">追光者</h4>
+                    <p class="text-gray-600 text-xs truncate">岑宁儿</p>
+                </div>
+                <button class="ml-4 text-gray-600 hover:text-accent transition-colors">
+                    <i class="fa fa-heart-o"></i>
+                </button>
+            </div>
+
+            <!-- 播放控制 -->
+            <div class="flex flex-col items-center justify-center w-1/3">
+                <div class="flex items-center space-x-6 mb-2">
+                    <button class="text-gray-600 hover:text-accent transition-colors">
+                        <i class="fa fa-random"></i>
+                    </button>
+                    <button class="text-gray-600 hover:text-accent transition-colors">
+                        <i class="fa fa-step-backward"></i>
+                    </button>
+                    <button class="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-white hover:bg-accent/90 transition-all">
+                        <i class="fa fa-pause ml-0.5"></i>
+                    </button>
+                    <button class="text-gray-600 hover:text-accent transition-colors">
+                        <i class="fa fa-step-forward"></i>
+                    </button>
+                    <button class="text-gray-600 hover:text-accent transition-colors">
+                        <i class="fa fa-repeat"></i>
+                    </button>
+                </div>
+                <div class="flex items-center w-full max-w-md">
+                    <span class="text-xs text-gray-600 mr-2">1:23</span>
+                    <div class="flex-1 h-1 bg-gray-300 rounded-full overflow-hidden">
+                        <div class="h-full w-1/3 bg-accent rounded-full relative">
+                            <div class="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white shadow"></div>
+                        </div>
+                    </div>
+                    <span class="text-xs text-gray-600 ml-2">3:55</span>
+                </div>
+            </div>
+
+            <!-- 音量控制 -->
+            <div class="flex items-center justify-end w-1/3">
+                <button class="text-gray-600 hover:text-accent transition-colors mr-2">
+                    <i class="fa fa-list"></i>
+                </button>
+                <div class="hidden md:flex items-center">
+                    <button class="text-gray-600 hover:text-accent transition-colors mr-2">
+                        <i class="fa fa-volume-up"></i>
+                    </button>
+                    <div class="w-20 h-1 bg-gray-300 rounded-full overflow-hidden">
+                        <div class="h-full w-2/3 bg-gray-400 rounded-full"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 页脚 -->
+<footer class="hidden"> <!-- 被播放器遮挡，临时隐藏 -->
+    <div class="glass-effect border-t border-white/10 py-6">
+        <div class="container mx-auto text-center text-gray-600 text-sm">
+            <p>© 2025 XGX. All Rights Reserved.</p>
+        </div>
+    </div>
+</footer>
+
+<!-- JavaScript -->
+<script>
+    // 页面加载时执行搜索
+    document.addEventListener('DOMContentLoaded', function() {
+        // 获取URL中的搜索关键词
+        const urlParams = new URLSearchParams(window.location.search);
+        const keyword = urlParams.get('q') || '';
+
+        // 设置搜索框的值
+        const searchInput = document.querySelector('header input[type="text"]');
+        searchInput.value = keyword;
+        console.log(keyword);
+        // 如果有关键词，执行搜索
+        if (keyword) {
+            performSearch(keyword);
+        }
+
+        // 标签切换功能
+        document.querySelectorAll('[data-tab]').forEach(tab => {
+            tab.addEventListener('click', () => {
+                // 更新活动标签样式
+                document.querySelectorAll('[data-tab]').forEach(t => {
+                    t.classList.remove('border-b-2', 'border-primary', 'text-primary');
+                    t.classList.add('text-gray-600');
+                });
+                tab.classList.add('border-b-2', 'border-primary', 'text-primary');
+                tab.classList.remove('text-gray-600');
+
+                // 显示对应的内容区
+                const tabId = tab.dataset.tab;
+                document.querySelectorAll('.result-section').forEach(section => {
+                    section.classList.add('hidden');
+                });
+                document.getElementById(`${tabId}-section`).classList.remove('hidden');
+            });
+        });
+
+        // 搜索框事件监听（与home.html相同）
+        let searchTimer = null;
+        //搜索框中输入关键词的联想功能时启用
+        // searchInput.addEventListener('input', function(e) {
+        //     clearTimeout(searchTimer);
+        //     const keyword = e.target.value.trim();
+        //     if (keyword.length >= 2) {
+        //         searchTimer = setTimeout(() => {
+        //             executeSearch(keyword);
+        //         }, 500);
+        //     }
+        // });
+
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                clearTimeout(searchTimer);
+                const keyword = e.target.value.trim();
+                if (keyword) {
+                    executeSearch(keyword);
+                }
+            }
+        });
+
+        document.querySelector('header .fa-search').addEventListener('click', function() {
+            const keyword = searchInput.value.trim();
+            if (keyword) {
+                executeSearch(keyword);
+            }
+        });
+    });
+
+    // 执行搜索并跳转
+    function executeSearch(keyword) {
+        window.location.href = `search.html?q=${encodeURIComponent(keyword)}`;
+    }
+
+    // 执行搜索请求
+    async function performSearch(keyword, page = 1) {
+        try {
+            // 显示加载状态
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('empty-state').classList.add('hidden');
+            document.getElementById('searchTitle').textContent = `"${keyword}"的搜索结果`;
+
+            // 发送搜索请求
+            console.log("发送请求！！！")
+            // 修改performSearch函数
+            const response = await axios.post('/searchServlet?action=search', {
+                keyword: keyword,
+                page: page,
+                pageSize: 10
+            });
+
+            const data = response.data.message;
+            console.log(data);
+            // 更新统计信息
+            document.getElementById('songCount').textContent = data.songCount || 0;
+            document.getElementById('albumCount').textContent = data.albumCount || 0;
+            document.getElementById('artistCount').textContent = data.singerCount || 0;
+
+            // 渲染搜索结果
+            if (data.songCount > 0) {
+                renderSongs(data.songs);
+                const pageSize = 10; // 每页显示10条
+                const totalSongs = data.songCount || 0; // 歌曲总记录数
+                const totalPages = Math.ceil(totalSongs / pageSize); // 计算总页数（向上取整）
+                renderPagination(page, totalPages || 1);
+                document.getElementById('empty-state').classList.add('hidden');
+            } else {
+                document.getElementById('songs-list').innerHTML = '';
+                document.getElementById('empty-state').classList.remove('hidden');
+            }
+
+            if (data.albumCount > 0) {
+                renderAlbums(data.albums);
+            }
+
+            if (data.singerCount > 0) {
+                renderArtists(data.singers);
+            }
+
+        } catch (error) {
+            console.error('搜索失败:', error);
+            document.getElementById('empty-state').classList.remove('hidden');
+            document.getElementById('empty-state').querySelector('h3').textContent = '搜索失败';
+            document.getElementById('empty-state').querySelector('p').textContent = '请稍后重试';
+        } finally {
+            document.getElementById('loading').classList.add('hidden');
+        }
+    }
+
+    // 渲染歌曲列表
+    function renderSongs(songs) {
+        const tbody = document.getElementById('songs-list');
+        tbody.innerHTML = '';
+
+        songs.forEach((song, index) => {
+            const tr = document.createElement('tr');
+            tr.className = 'border-b border-white/10 hover:bg-white/10 transition-colors';
+
+            // 处理歌手信息
+            let singerHtml = '未知歌手';
+            if (song.singers && song.singers.length > 0) {
+                if (song.singers.length > 1) {
+                    // 多个歌手的情况
+                    singerHtml = '<div class="songlist__artist">';
+                    song.singers.forEach((singer, i) => {
+                        singerHtml += `<a class="playlist__author" title="${escapeHtml(singer.name)}" href="/n/ryqq/singer/${escapeHtml(singer.id)}">${escapeHtml(singer.name)}</a>`;
+                        if (i < song.singers.length - 1) {
+                            singerHtml += ' /';
+                        }
+                    });
+                    singerHtml += '</div>';
+                } else {
+                    // 单个歌手的情况
+                    const singer = song.singers[0];
+                    singerHtml = `<a class="playlist__author" title="${escapeHtml(singer.name)}" href="/n/ryqq/singer/${escapeHtml(singer.id)}">${escapeHtml(singer.name)}</a>`;
+                }
+            }
+
+            // 获取歌手名称列表（用于显示在移动端）
+            const singerNames = song.singers ? song.singers.map(s => escapeHtml(s.name)).join('/ ') : '未知歌手';
+
+            tr.innerHTML = `
+            <td class="py-4 px-6 text-gray-600">${index + 1}</td>
+            <td class="py-4 px-6">
+                <div class="flex items-center song-item"
+                     data-song-id="${escapeHtml(song.songId)}"
+                     data-song-name="${escapeHtml(song.songName)}"
+                     data-cover-url="${escapeHtml(song.coverUrl)}"
+                     data-lyric-url="${escapeHtml(song.lyricUrl)}"
+                     data-duration="${escapeHtml(song.duration)}"
+                     data-singer-name="${singerNames}"
+                     data-favorite-count="${escapeHtml(song.favoriteCount)}"
+                     data-album="${escapeHtml(song.albumName)}">
+                    <img src="${escapeHtml(song.coverUrl)}"
+                         alt="歌曲封面" class="w-10 h-10 rounded mr-3">
+                    <div>
+                        <h4 class="font-medium text-gray-800">${escapeHtml(song.songName)}</h4>
+                        <p class="text-gray-600 text-sm hidden sm:block">${singerNames}</p>
+                    </div>
+                </div>
+            </td>
+            <td class="py-4 px-6 hidden md:table-cell text-gray-800">${singerHtml}</td>
+            <td class="py-4 px-6 hidden lg:table-cell text-gray-600">${song.albumName ? `《${escapeHtml(song.albumName)}》` : '未知专辑'}</td>
+            <td class="py-4 px-6 text-right text-gray-600">${escapeHtml(song.duration)}</td>
+        `;
+
+            // 添加点击事件
+            tr.querySelector('.song-item').addEventListener('click', (e) => {
+                const songItem = e.currentTarget;
+                const playSongData = {
+                    songId: songItem.dataset.songId,
+                    songName: songItem.dataset.songName,
+                    coverUrl:songItem.dataset.coverUrl,
+                    lyricUrl:songItem.dataset.lyricUrl,
+                    duration:songItem.dataset.duration,
+                    singerName: songItem.dataset.singerName,
+                    album: songItem.dataset.album,
+                    favoriteCount: songItem.dataset.favoriteCount
+                };
+                // 需要先拿到当前搜索结果的完整歌曲列表（songs）
+                localStorage.setItem('searchSongList', JSON.stringify(songs));
+                // 保存当前播放索引
+                localStorage.setItem('currentSongIndex', index);
+                // 保存当前歌曲信息
+                localStorage.setItem('playSongData', JSON.stringify(playSongData));
+                // window.location.href = 'player.html';
+                window.open('player.html', '_blank');
+            });
+
+            tbody.appendChild(tr);
+        });
+    }
+
+    // 渲染专辑列表
+    function renderAlbums(albums) {
+        const container = document.getElementById('albums-list');
+        container.innerHTML = '';
+
+        albums.forEach(album => {
+            const div = document.createElement('div');
+            div.className = 'album-hover bg-card rounded-xl overflow-hidden p-3';
+            div.innerHTML = `
+                <div class="rounded-lg overflow-hidden mb-3 aspect-square relative group">
+                    <img src="${escapeHtml(album.coverUrl || 'https://picsum.photos/300/300?random=' + album.id)}"
+                         alt="专辑封面" class="w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <button class="w-10 h-10 rounded-full bg-accent text-white flex items-center justify-center transform translate-y-4 group-hover:translate-y-0 transition-transform">
+                            <i class="fa fa-play ml-1"></i>
+                        </button>
+                    </div>
+                </div>
+                <h4 class="font-medium text-sm truncate text-gray-800">${escapeHtml(album.name)}</h4>
+                <p class="text-gray-600 text-xs mt-1 truncate">${escapeHtml(album.artistName || '未知歌手')} · ${escapeHtml(album.year || '')}</p>
+            `;
+
+            div.addEventListener('click', () => {
+                window.location.href = `album.html?id=${album.id}`;
+            });
+
+            container.appendChild(div);
+        });
+    }
+
+    // 渲染歌手列表
+    function renderArtists(artists) {
+        const container = document.getElementById('artists-list');
+        container.innerHTML = '';
+
+        artists.forEach(singer => {
+            const div = document.createElement('div');
+            div.className = 'album-hover bg-card rounded-xl overflow-hidden p-3';
+            div.innerHTML = `
+                <div class="rounded-lg overflow-hidden mb-3 aspect-square relative group">
+                    <img src="static/images/singerAvatars/${escapeHtml(singer.avatar)}"
+                         alt="歌手头像" class="w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <button class="w-10 h-10 rounded-full bg-accent text-white flex items-center justify-center transform translate-y-4 group-hover:translate-y-0 transition-transform">
+                            <i class="fa fa-user ml-1"></i>
+                        </button>
+                    </div>
+                </div>
+                <h4 class="font-medium text-sm truncate text-gray-800 text-center">${escapeHtml(singer.name)}</h4>
+                <p class="text-gray-600 text-xs mt-1 truncate text-center">${escapeHtml(singer.type || '歌手')}</p>
+            `;
+
+            div.addEventListener('click', () => {
+                window.location.href = `artist.html?id=${artist.id}`;
+            });
+
+            container.appendChild(div);
+        });
+    }
+
+    // 渲染分页控件
+    function renderPagination(currentPage, totalPages) {
+        const pagination = document.getElementById('pagination');
+        pagination.innerHTML = '';
+
+        if (totalPages <= 1) return;
+
+        // 上一页按钮
+        const prevBtn = document.createElement('a');
+        prevBtn.href = '#';
+        prevBtn.className = `px-3 py-2 rounded-l-md border border-gray-300 bg-white ${currentPage === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-50'}`;
+        prevBtn.innerHTML = '<i class="fa fa-angle-left"></i>';
+        if (currentPage > 1) {
+            prevBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const keyword = new URLSearchParams(window.location.search).get('q');
+                performSearch(keyword, currentPage - 1);
+            });
+        }
+        pagination.appendChild(prevBtn);
+
+        // 页码按钮
+        const startPage = Math.max(1, currentPage - 2);
+        const endPage = Math.min(totalPages, currentPage + 2);
+
+        for (let i = startPage; i <= endPage; i++) {
+            const pageBtn = document.createElement('a');
+            pageBtn.href = '#';
+            pageBtn.className = `px-4 py-2 border-t border-b border-gray-300 bg-white ${i === currentPage ? 'text-primary font-medium' : 'text-gray-500 hover:bg-gray-50'}`;
+            pageBtn.textContent = i;
+            pageBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const keyword = new URLSearchParams(window.location.search).get('q');
+                performSearch(keyword, i);
+            });
+            pagination.appendChild(pageBtn);
+        }
+
+        // 下一页按钮
+        const nextBtn = document.createElement('a');
+        nextBtn.href = '#';
+        nextBtn.className = `px-3 py-2 rounded-r-md border border-gray-300 bg-white ${currentPage === totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-50'}`;
+        nextBtn.innerHTML = '<i class="fa fa-angle-right"></i>';
+        if (currentPage < totalPages) {
+            nextBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const keyword = new URLSearchParams(window.location.search).get('q');
+                performSearch(keyword, currentPage + 1);
+            });
+        }
+        pagination.appendChild(nextBtn);
+    }
+
+    // // 格式化时长
+    // function formatDuration(seconds) {
+    //     if (!seconds) return '00:00';
+    //     const mins = Math.floor(seconds / 60);
+    //     const secs = seconds % 60;
+    //     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    // }
+</script>
+</body>
+</html>

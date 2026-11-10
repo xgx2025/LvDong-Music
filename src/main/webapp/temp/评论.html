@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <!-- 依赖和脚本在引导页中 -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>律动音乐-歌曲评论</title>
+    <script src="../static/js/config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="../static/js/axios-config.js"></script>
+<!--    <script src="static/js/auth.js" defer></script>-->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        const base = document.createElement('base');
+        base.href = `http://${SERVER_IP}/xgxmusic/`;
+        document.head.appendChild(base);
+    </script>
+
+    <!-- Tailwind 配置 - 优化后的颜色方案 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1c42df',  // 蓝色
+                        secondary: '#3BECB4', // 更清新的绿色
+                        accent: '#2EC4B6',  // 蓝绿色(点缀色)
+                        accent2: '#FFB74D',  // 橙色点缀色
+                        dark: '#1E293B',
+                        light: '#F8FAFC',
+                        glass: 'rgba(255, 255, 255, 0.15)' // 透明玻璃效果
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                    },
+                },
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .text-shadow {
+                text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .bg-gradient-music {
+                background: linear-gradient(135deg, #4A6CF7 0%, #3BECB4 100%);
+            }
+            .glass-effect {
+                backdrop-filter: blur(10px);
+                background-color: rgba(255, 255, 255, 0.15);
+            }
+            .scrollbar-hide::-webkit-scrollbar {
+                display: none;
+            }
+            .album-hover {
+                transition: transform 0.3s ease, box-shadow 0.3s ease;
+            }
+            .album-hover:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+            }
+            .hover-accent:hover {
+                color: #2EC4B6;
+            }
+            .hover-accent2:hover {
+                color: #FFB74D;
+            }
+            .bg-card {
+                background-color: rgba(255, 255, 255, 0.3);
+            }
+            .comment-box {
+                transition: all 0.3s ease;
+            }
+            .comment-box:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            }
+            .like-btn:hover .like-icon {
+                color: #FF3A57;
+            }
+            .reply-btn:hover .reply-icon {
+                color: #2EC4B6;
+            }
+        }
+    </style>
+</head>
+<body class="font-inter bg-gradient-to-br from-blue-50 to-green-50 text-gray-800 min-h-screen">
+<!-- 背景 -->
+<div class="fixed inset-0 -z-10">
+    <div class="absolute inset-0 bg-gradient-music opacity-30"></div>
+    <div class="absolute inset-0 bg-white/20"></div>
+</div>
+
+<!-- 顶部导航 -->
+<header class="fixed top-0 left-0 right-0 z-50 p-4 glass-effect border-b border-white/30">
+    <div class="container mx-auto flex justify-between items-center">
+        <!-- 品牌标识 -->
+        <div class="flex items-center">
+            <div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mr-2">
+                <i class="fa fa-music text-primary"></i>
+            </div>
+            <h1 class="text-xl font-bold text-gray-800">律动</h1>
+        </div>
+
+        <!-- 搜索栏 -->
+        <div class="relative max-w-md w-full mx-4 block">
+            <input type="text" placeholder="搜索歌曲、歌手或专辑..."
+                   class="w-full pl-10 pr-4 py-2 rounded-full bg-white/50 border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all text-gray-700">
+            <i class="fa fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"></i>
+        </div>
+
+        <!-- 导航菜单 -->
+        <nav>
+            <ul class="flex space-x-6 items-center">
+                <li><a href="../home.html" class="text-gray-700 hover:text-primary transition-colors"><i class="fa fa-home mr-1"></i>首页</a></li>
+                <li><a href="../upload-music.html" class="text-gray-700 hover:text-primary transition-colors"><i class="fa fa-upload mr-1"></i>上传</a></li>
+                <li><a href="../user-profile.html" class="text-gray-700 hover:text-primary transition-colors"><i class="fa fa-user mr-1"></i>我的</a></li>
+                <li>
+                    <button id="logoutBtn" class="text-gray-700 hover:text-accent transition-colors">
+                        <i class="fa fa-sign-out"></i>
+                    </button>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</header>
+
+<!-- 主内容区 -->
+<main class="container mx-auto pt-24 pb-32 px-4">
+    <!-- 歌曲信息区 -->
+    <section class="mb-8 flex flex-col md:flex-row items-start gap-6">
+        <!-- 歌曲封面 -->
+        <div class="w-full md:w-1/3 lg:w-1/4">
+            <div class="rounded-2xl overflow-hidden shadow-lg aspect-square">
+                <img id="songCover" src="https://picsum.photos/400/400?random=50" alt="歌曲封面" class="w-full h-full object-cover">
+            </div>
+        </div>
+
+        <!-- 歌曲详情 -->
+        <div class="flex-1">
+            <div class="flex items-center justify-between mb-4">
+                <h1 id="songTitle" class="text-3xl font-bold text-gray-800">知我</h1>
+                <button class="text-gray-600 hover:text-accent2 transition-colors">
+                    <i class="fa fa-heart-o text-2xl"></i>
+                </button>
+            </div>
+
+            <div class="mb-6">
+                <p id="songArtist" class="text-lg text-gray-700 mb-2">歌手: <span class="font-medium">国风堂;峨漏</span></p>
+                <p id="songAlbum" class="text-gray-600">专辑: <span class="font-medium">《知我》原声带</span></p>
+            </div>
+
+            <div class="flex items-center space-x-4 mb-6">
+                <button class="bg-accent hover:bg-accent/90 text-white rounded-full px-6 py-2 flex items-center shadow-lg transition-all">
+                    <i class="fa fa-play mr-2"></i> 播放
+                </button>
+                <button class="border border-gray-300 hover:border-primary text-gray-700 hover:text-primary rounded-full px-6 py-2 flex items-center transition-colors">
+                    <i class="fa fa-share-alt mr-2"></i> 分享
+                </button>
+            </div>
+
+            <div class="flex items-center text-sm text-gray-600">
+                <span class="mr-4"><i class="fa fa-headphones mr-1"></i> 播放: 1,245,678</span>
+                <span class="mr-4"><i class="fa fa-comments mr-1"></i> 评论: 3,456</span>
+                <span><i class="fa fa-calendar mr-1"></i> 发行: 2023-05-20</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- 歌词和评论切换 -->
+    <section class="mb-8">
+        <div class="flex border-b border-gray-200">
+            <button id="lyricsTab" class="px-4 py-2 font-medium text-gray-600 hover:text-primary border-b-2 border-transparent hover:border-primary transition-colors">
+                歌词
+            </button>
+            <button id="commentsTab" class="px-4 py-2 font-medium text-primary border-b-2 border-primary transition-colors">
+                评论 (3,456)
+            </button>
+        </div>
+    </section>
+
+    <!-- 评论发布区 -->
+    <section class="mb-10 glass-effect rounded-xl p-6 shadow-sm">
+        <div class="flex items-start gap-4">
+            <img id="userAvatar" src="https://picsum.photos/50/50?random=100" alt="用户头像" class="w-10 h-10 rounded-full">
+            <div class="flex-1">
+                <textarea id="commentInput" placeholder="分享你对这首歌的想法..."
+                          class="w-full p-3 rounded-lg border border-gray-300 focus:border-primary focus:ring-2 focus:ring-primary/30 resize-none h-24 transition-all"></textarea>
+                <div class="flex justify-between items-center mt-3">
+                    <div class="flex items-center text-gray-500 text-sm">
+                        <span>还可以输入 <span id="charCount" class="font-medium">140</span> 字</span>
+                    </div>
+                    <button id="submitComment" class="bg-primary hover:bg-primary/90 text-white rounded-full px-6 py-2 transition-colors">
+                        发布
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 热门评论 -->
+    <section class="mb-8">
+        <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+            <i class="fa fa-fire text-accent2 mr-2"></i> 热门评论
+        </h3>
+
+        <!-- 热门评论列表 -->
+        <div class="space-y-6">
+            <!-- 评论1 -->
+            <div class="comment-box bg-white rounded-xl p-5 shadow-md">
+                <div class="flex items-start gap-4 mb-4">
+                    <img src="https://picsum.photos/50/50?random=101" alt="用户头像" class="w-10 h-10 rounded-full">
+                    <div>
+                        <h4 class="font-medium text-gray-800">音乐爱好者</h4>
+                        <div class="flex items-center text-xs text-gray-500 mt-1">
+                            <span class="mr-2">2024-03-15</span>
+                            <div class="flex items-center text-accent2">
+                                <i class="fa fa-star"></i>
+                                <i class="fa fa-star"></i>
+                                <i class="fa fa-star"></i>
+                                <i class="fa fa-star"></i>
+                                <i class="fa fa-star"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-gray-700 mb-4">
+                    这首歌真的太棒了！旋律优美，歌词深刻，每次听都有不同的感受。国风与现代元素的结合恰到好处，峨漏的嗓音太适合这首歌了！
+                </p>
+                <div class="flex items-center justify-between text-sm">
+                    <div class="flex items-center space-x-4">
+                        <button class="like-btn flex items-center text-gray-600 hover:text-accent2 transition-colors">
+                            <i class="like-icon fa fa-thumbs-o-up mr-1"></i>
+                            <span>1,234</span>
+                        </button>
+                        <button class="reply-btn flex items-center text-gray-600 hover:text-accent transition-colors">
+                            <i class="reply-icon fa fa-comment-o mr-1"></i>
+                            <span>回复</span>
+                        </button>
+                    </div>
+                    <button class="text-gray-500 hover:text-primary transition-colors">
+                        <i class="fa fa-ellipsis-h"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 评论2 -->
+            <div class="comment-box bg-white rounded-xl p-5 shadow-md">
+                <div class="flex items-start gap-4 mb-4">
+                    <img src="https://picsum.photos/50/50?random=102" alt="用户头像" class="w-10 h-10 rounded-full">
+                    <div>
+                        <h4 class="font-medium text-gray-800">清风明月</h4>
+                        <div class="flex items-center text-xs text-gray-500 mt-1">
+                            <span class="mr-2">2024-02-28</span>
+                            <div class="flex items-center text-accent2">
+                                <i class="fa fa-star"></i>
+                                <i class="fa fa-star"></i>
+                                <i class="fa fa-star"></i>
+                                <i class="fa fa-star"></i>
+                                <i class="fa fa-star-half-o"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-gray-700 mb-4">
+                    单曲循环了一整天，完全停不下来！副歌部分太抓耳了，国风堂的制作水准一如既往的高。歌词写得很有意境，"知我者谓我心忧，不知我者谓我何求"，改编自古诗却毫无违和感。
+                </p>
+                <div class="flex items-center justify-between text-sm">
+                    <div class="flex items-center space-x-4">
+                        <button class="like-btn flex items-center text-gray-600 hover:text-accent2 transition-colors">
+                            <i class="like-icon fa fa-thumbs-o-up mr-1"></i>
+                            <span>876</span>
+                        </button>
+                        <button class="reply-btn flex items-center text-gray-600 hover:text-accent transition-colors">
+                            <i class="reply-icon fa fa-comment-o mr-1"></i>
+                            <span>回复</span>
+                        </button>
+                    </div>
+                    <button class="text-gray-500 hover:text-primary transition-colors">
+                        <i class="fa fa-ellipsis-h"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 最新评论 -->
+    <section>
+        <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+            <i class="fa fa-clock-o text-accent mr-2"></i> 最新评论
+        </h3>
+
+        <!-- 最新评论列表 -->
+        <div class="space-y-6">
+            <!-- 评论1 -->
+            <div class="comment-box bg-white rounded-xl p-5 shadow-md">
+                <div class="flex items-start gap-4 mb-4">
+                    <img src="https://picsum.photos/50/50?random=103" alt="用户头像" class="w-10 h-10 rounded-full">
+                    <div>
+                        <h4 class="font-medium text-gray-800">旋律捕手</h4>
+                        <div class="flex items-center text-xs text-gray-500 mt-1">
+                            <span class="mr-2">2024-04-05</span>
+                            <div class="flex items-center text-accent2">
+                                <i class="fa fa-star"></i>
+                                <i class="fa fa-star"></i>
+                                <i class="fa fa-star"></i>
+                                <i class="fa fa-star"></i>
+                                <i class="fa fa-star-o"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-gray-700 mb-4">
+                    第一次听就被惊艳到了！编曲中的古筝和现代电子音效的融合太巧妙了，峨漏的嗓音既有力量又不失温柔，完美诠释了歌曲的情感。
+                </p>
+                <div class="flex items-center justify-between text-sm">
+                    <div class="flex items-center space-x-4">
+                        <button class="like-btn flex items-center text-gray-600 hover:text-accent2 transition-colors">
+                            <i class="like-icon fa fa-thumbs-o-up mr-1"></i>
+                            <span>342</span>
+                        </button>
+                        <button class="reply-btn flex items-center text-gray-600 hover:text-accent transition-colors">
+                            <i class="reply-icon fa fa-comment-o mr-1"></i>
+                            <span>回复</span>
+                        </button>
+                    </div>
+                    <button class="text-gray-500 hover:text-primary transition-colors">
+                        <i class="fa fa-ellipsis-h"></i>
+                    </button>
+                </div>
+
+                <!-- 回复 -->
+                <div class="mt-4 pl-4 border-l-2 border-gray-200">
+                    <div class="bg-gray-50 rounded-lg p-3">
+                        <div class="flex items-start gap-2 mb-2">
+                            <img src="https://picsum.photos/50/50?random=104" alt="用户头像" class="w-8 h-8 rounded-full">
+                            <div>
+                                <h5 class="text-sm font-medium text-gray-800">音乐小站</h5>
+                                <p class="text-xs text-gray-500">2024-04-06</p>
+                            </div>
+                        </div>
+                        <p class="text-sm text-gray-700">
+                            完全同意！特别是2分15秒那段古筝solo，简直是神来之笔！
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 评论2 -->
+            <div class="comment-box bg-white rounded-xl p-5 shadow-md">
+                <div class="flex items-start gap-4 mb-4">
+                    <img src="https://picsum.photos/50/50?random=105" alt="用户头像" class="w-10 h-10 rounded-full">
+                    <div>
+                        <h4 class="font-medium text-gray-800">国风爱好者</h4>
+                        <div class="flex items-center text-xs text-gray-500 mt-1">
+                            <span class="mr-2">2024-04-03</span>
+                            <div class="flex items-center text-accent2">
+                                <i class="fa fa-star"></i>
+                                <i class="fa fa-star"></i>
+                                <i class="fa fa-star"></i>
+                                <i class="fa fa-star"></i>
+                                <i class="fa fa-star"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-gray-700 mb-4">
+                    这才是真正的国风音乐！不是简单的古风歌词加流行旋律，而是真正把传统文化精髓融入现代音乐表达中。MV也拍得很有意境，水墨画风格和现代视觉效果的结合太棒了！
+                </p>
+                <div class="flex items-center justify-between text-sm">
+                    <div class="flex items-center space-x-4">
+                        <button class="like-btn flex items-center text-gray-600 hover:text-accent2 transition-colors">
+                            <i class="like-icon fa fa-thumbs-o-up mr-1"></i>
+                            <span>521</span>
+                        </button>
+                        <button class="reply-btn flex items-center text-gray-600 hover:text-accent transition-colors">
+                            <i class="reply-icon fa fa-comment-o mr-1"></i>
+                            <span>回复</span>
+                        </button>
+                    </div>
+                    <button class="text-gray-500 hover:text-primary transition-colors">
+                        <i class="fa fa-ellipsis-h"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 评论3 -->
+            <div class="comment-box bg-white rounded-xl p-5 shadow-md">
+                <div class="flex items-start gap-4 mb-4">
+                    <img src="https://picsum.photos/50/50?random=106" alt="用户头像" class="w-10 h-10 rounded-full">
+                    <div>
+                        <h4 class="font-medium text-gray-800">音乐制作人</h4>
+                        <div class="flex items-center text-xs text-gray-500 mt-1">
+                            <span class="mr-2">2024-04-01</span>
+                            <div class="flex items-center text-accent2">
+                                <i class="fa fa-star"></i>
+                                <i class="fa fa-star"></i>
+                                <i class="fa fa-star"></i>
+                                <i class="fa fa-star"></i>
+                                <i class="fa fa-star-half-o"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-gray-700 mb-4">
+                    从专业角度来说，这首歌的制作水准非常高。编曲层次丰富但不杂乱，混音处理得非常干净，每个乐器的频段都分配得很好。人声处理也很到位，既有细节又保持了自然感。
+                </p>
+                <div class="flex items-center justify-between text-sm">
+                    <div class="flex items-center space-x-4">
+                        <button class="like-btn flex items-center text-gray-600 hover:text-accent2 transition-colors">
+                            <i class="like-icon fa fa-thumbs-o-up mr-1"></i>
+                            <span>298</span>
+                        </button>
+                        <button class="reply-btn flex items-center text-gray-600 hover:text-accent transition-colors">
+                            <i class="reply-icon fa fa-comment-o mr-1"></i>
+                            <span>回复</span>
+                        </button>
+                    </div>
+                    <button class="text-gray-500 hover:text-primary transition-colors">
+                        <i class="fa fa-ellipsis-h"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 分页 -->
+        <div class="mt-8 flex justify-center">
+            <nav class="inline-flex rounded-md shadow">
+                <a href="#" class="px-3 py-2 rounded-l-md border border-gray-300 bg-white text-gray-500 hover:bg-gray-50">
+                    <i class="fa fa-angle-left"></i>
+                </a>
+                <a href="#" class="px-3 py-2 border-t border-b border-gray-300 bg-white text-primary font-medium">1</a>
+                <a href="#" class="px-3 py-2 border-t border-b border-gray-300 bg-white text-gray-500 hover:bg-gray-50">2</a>
+                <a href="#" class="px-3 py-2 border-t border-b border-gray-300 bg-white text-gray-500 hover:bg-gray-50">3</a>
+                <a href="#" class="px-3 py-2 border border-gray-300 bg-white text-gray-500 hover:bg-gray-50 rounded-r-md">
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </nav>
+        </div>
+    </section>
+</main>
+
+<!-- 底部播放器（固定在底部） -->
+<div class="fixed bottom-0 left-0 right-0 glass-effect border-t border-white/30 z-50">
+    <div class="container mx-auto px-4">
+        <div class="flex items-center justify-between h-20">
+            <!-- 当前播放歌曲信息 -->
+            <div class="flex items-center w-1/3">
+                <img src="https://picsum.photos/100/100?random=40" alt="当前播放" class="w-12 h-12 rounded mr-3">
+                <div class="min-w-0">
+                    <h4 class="font-medium text-sm truncate text-gray-800">知我</h4>
+                    <p class="text-gray-600 text-xs truncate">国风堂;峨漏</p>
+                </div>
+                <button class="ml-4 text-gray-600 hover:text-accent2 transition-colors">
+                    <i class="fa fa-heart-o"></i>
+                </button>
+            </div>
+
+            <!-- 播放控制 -->
+            <div class="flex flex-col items-center justify-center w-1/3">
+                <div class="flex items-center space-x-6 mb-2">
+                    <button class="text-gray-600 hover:text-accent transition-colors">
+                        <i class="fa fa-random"></i>
+                    </button>
+                    <button class="text-gray-600 hover:text-accent transition-colors">
+                        <i class="fa fa-step-backward"></i>
+                    </button>
+                    <button class="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-white hover:bg-accent/90 transition-all">
+                        <i class="fa fa-pause ml-0.5"></i>
+                    </button>
+                    <button class="text-gray-600 hover:text-accent transition-colors">
+                        <i class="fa fa-step-forward"></i>
+                    </button>
+                    <button class="text-gray-600 hover:text-accent transition-colors">
+                        <i class="fa fa-repeat"></i>
+                    </button>
+                </div>
+                <div class="flex items-center w-full max-w-md">
+                    <span class="text-xs text-gray-600 mr-2">1:23</span>
+                    <div class="flex-1 h-1 bg-gray-300 rounded-full overflow-hidden">
+                        <div class="h-full w-1/3 bg-accent rounded-full relative">
+                            <div class="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white shadow"></div>
+                        </div>
+                    </div>
+                    <span class="text-xs text-gray-600 ml-2">4:37</span>
+                </div>
+            </div>
+
+            <!-- 音量控制 -->
+            <div class="flex items-center justify-end w-1/3">
+                <button class="text-gray-600 hover:text-accent transition-colors mr-2">
+                    <i class="fa fa-list"></i>
+                </button>
+                <div class="hidden md:flex items-center">
+                    <button class="text-gray-600 hover:text-accent transition-colors mr-2">
+                        <i class="fa fa-volume-up"></i>
+                    </button>
+                    <div class="w-20 h-1 bg-gray-300 rounded-full overflow-hidden">
+                        <div class="h-full w-2/3 bg-gray-400 rounded-full"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript -->
+<script>
+    // 页面加载时验证登录状态并获取用户信息
+    document.addEventListener('DOMContentLoaded', function() {
+        const userInfo = auth.getUserInfo();
+        if (auth.isAuthenticated()) {
+            // 已登录，显示登录成功内容
+            console.log('通过验证');
+            // 更新用户头像
+            document.getElementById('userAvatar').src = userInfo.avatar || 'https://picsum.photos/50/50?random=100';
+        } else {
+            window.location.href='login.html';
+        }
+
+        // 退出登录功能
+        document.getElementById('logoutBtn').addEventListener('click', async function() {
+            console.log("退出登录");
+            if (confirm('确定要退出登录吗？')) {
+                // 调用auth的logout方法
+                if (typeof auth !== 'undefined' && auth.logout) {
+                    await auth.logout();
+                }
+            }
+        });
+
+        // 从URL获取歌曲ID
+        const urlParams = new URLSearchParams(window.location.search);
+        const songId = urlParams.get('id');
+
+        // 模拟获取歌曲详情
+        if (songId) {
+            // 这里应该是从API获取歌曲详情
+            console.log('加载歌曲ID:', songId);
+            // 模拟数据
+            const songData = {
+                id: songId,
+                title: "知我",
+                artist: "国风堂;峨漏",
+                album: "《知我》原声带",
+                cover: "https://picsum.photos/400/400?random=50",
+                playCount: 1245678,
+                commentCount: 3456,
+                releaseDate: "2023-05-20"
+            };
+
+            // 更新页面数据
+            document.getElementById('songTitle').textContent = songData.title;
+            document.getElementById('songArtist').innerHTML = `歌手: <span class="font-medium">${songData.artist}</span>`;
+            document.getElementById('songAlbum').innerHTML = `专辑: <span class="font-medium">${songData.album}</span>`;
+            document.getElementById('songCover').src = songData.cover;
+            document.querySelector('.fa-comments + span').textContent = `评论: ${songData.commentCount.toLocaleString()}`;
+            document.querySelector('.fa-calendar + span').textContent = `发行: ${songData.releaseDate}`;
+        }
+
+        // 评论输入框字数限制
+        const commentInput = document.getElementById('commentInput');
+        const charCount = document.getElementById('charCount');
+        const maxLength = 140;
+
+        commentInput.addEventListener('input', function() {
+            const remaining = maxLength - this.value.length;
+            charCount.textContent = remaining;
+
+            if (remaining < 0) {
+                charCount.classList.add('text-red-500');
+                this.value = this.value.substring(0, maxLength);
+            } else {
+                charCount.classList.remove('text-red-500');
+            }
+        });
+
+        // 提交评论
+        document.getElementById('submitComment').addEventListener('click', function() {
+            const content = commentInput.value.trim();
+            if (content.length === 0) {
+                alert('评论内容不能为空');
+                return;
+            }
+
+            if (content.length > maxLength) {
+                alert(`评论不能超过${maxLength}字`);
+                return;
+            }
+
+            // 这里应该是提交评论到API
+            console.log('提交评论:', content);
+            alert('评论已提交');
+            commentInput.value = '';
+            charCount.textContent = maxLength;
+
+            // 模拟添加新评论到列表顶部
+            // 实际应用中应该从API获取最新评论列表
+        });
+
+        // 点赞功能
+        document.querySelectorAll('.like-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const likeIcon = this.querySelector('.like-icon');
+                const likeCount = this.querySelector('span');
+
+                if (likeIcon.classList.contains('fa-thumbs-o-up')) {
+                    likeIcon.classList.remove('fa-thumbs-o-up');
+                    likeIcon.classList.add('fa-thumbs-up', 'text-accent2');
+                    likeCount.textContent = (parseInt(likeCount.textContent) + 1).toLocaleString();
+                } else {
+                    likeIcon.classList.remove('fa-thumbs-up', 'text-accent2');
+                    likeIcon.classList.add('fa-thumbs-o-up');
+                    likeCount.textContent = (parseInt(likeCount.textContent) - 1).toLocaleString();
+                }
+            });
+        });
+
+        // 歌词和评论标签切换
+        document.getElementById('lyricsTab').addEventListener('click', function() {
+            window.location.href = `lyrics.html?id=${songId}`;
+        });
+
+        document.getElementById('commentsTab').addEventListener('click', function() {
+            // 已经是评论页，无需操作
+        });
+    });
+</script>
+</body>
+</html>

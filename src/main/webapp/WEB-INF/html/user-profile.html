@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+
+</head>
+<body class="font-inter bg-gray-900 text-light min-h-screen p-4">
+<!-- 背景 -->
+<div class="fixed inset-0 -z-10">
+    <div class="absolute inset-0 bg-gradient-music opacity-80"></div>
+    <div class="absolute inset-0 bg-dark opacity-40"></div>
+</div>
+
+<!-- 顶部导航 -->
+<header class="fixed top-0 left-0 right-0 z-50 p-4 glass-effect border-b border-white/10">
+    <div class="container mx-auto flex justify-between items-center">
+        <div class="flex items-center">
+            <div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mr-2">
+                <i class="fa fa-music text-primary"></i>
+            </div>
+            <h1 class="text-xl font-bold">律动</h1>
+        </div>
+        <nav>
+            <ul class="flex space-x-6">
+                <li><a href="home.html" class="hover:text-primary transition-colors"><i class="fa fa-home mr-1"></i>首页</a></li>
+                <li><a href="user-profile.html" class="text-primary border-b-2 border-primary pb-1"><i class="fa fa-user mr-1"></i>个人中心</a></li>
+            </ul>
+        </nav>
+    </div>
+</header>
+
+<!-- 主内容区 -->
+<main class="container mx-auto mt-24 mb-40 max-w-3xl">
+    <!-- 用户信息卡片 -->
+    <div class="glass-effect rounded-2xl p-8 border border-white/10 shadow-xl mb-8">
+        <div class="text-center mb-8">
+            <h2 class="text-2xl font-bold mb-2">个人资料</h2>
+            <p class="text-gray-400">管理你的个人信息和账户设置</p>
+        </div>
+
+        <!-- 头像和基本信息 -->
+        <div class="flex flex-col md:flex-row items-center gap-6 mb-8">
+            <!-- 头像 -->
+            <div class="relative">
+                <div id="avatarContainer" class="w-32 h-32 rounded-full overflow-hidden border-4 border-primary/30">
+                    <!-- 默认头像（如果没有用户头像） -->
+                    <img id="userAvatar" src="" alt="用户头像" class="w-full h-full object-cover">
+                </div>
+            </div>
+
+            <!-- 基本信息 -->
+            <div class="text-center md:text-left flex-1">
+                <h3 id="userName" class="text-2xl font-bold mb-1">加载中...</h3>
+                <p id="userEmail" class="text-gray-400 mb-3">加载中...</p>
+                <div class="flex flex-wrap gap-2 justify-center md:justify-start">
+                    <span class="px-3 py-1 rounded-full bg-primary/20 text-primary text-sm"><i class="fa fa-calendar mr-1"></i>注册时间: <span id="userRegTime">--</span></span>
+                    <span class="px-3 py-1 rounded-full bg-secondary/20 text-secondary text-sm"><i class="fa fa-music mr-1"></i>收藏歌曲: <span id="userFavCount">0</span></span>
+                    <span class="px-3 py-1 rounded-full bg-purple-500/20 text-purple-400 text-sm"><i class="fa fa-venus-mars mr-1"></i><span id="userGender">未设置</span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 个人简介 -->
+        <div class="mb-8 p-4 bg-white/5 rounded-xl border border-white/10">
+            <h4 class="text-gray-300 mb-2 flex items-center">
+                <i class="fa fa-comment-o mr-2 text-primary"></i>个人简介
+            </h4>
+            <p id="userBio" class="text-gray-200 min-h-[60px]">
+                该用户尚未填写个人简介
+            </p>
+        </div>
+
+        <!-- 详细信息列表 -->
+        <div class="space-y-6 border-t border-white/10 pt-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                <div class="text-gray-400"><i class="fa fa-id-card mr-2"></i>用户ID</div>
+                <div id="userId" class="md:col-span-2">--</div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                <div class="text-gray-400"><i class="fa fa-envelope mr-2"></i>邮箱</div>
+                <div id="userEmailDetail" class="md:col-span-2">--</div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                <div class="text-gray-400"><i class="fa fa-user-circle mr-2"></i>用户名</div>
+                <div id="userNameDetail" class="md:col-span-2">--</div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                <div class="text-gray-400"><i class="fa fa-venus-mars mr-2"></i>性别</div>
+                <div id="userGenderDetail" class="md:col-span-2">未设置</div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                <div class="text-gray-400"><i class="fa fa-flag mr-2"></i>账户状态</div>
+                <div id="userStatus" class="md:col-span-2 text-secondary"><i class="fa fa-check-circle mr-1"></i>正常</div>
+            </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="flex justify-end gap-4 mt-8">
+            <button id="logoutBtn" class="px-6 py-2 rounded-lg border border-gray-600 hover:bg-gray-800 transition-colors">
+                <i class="fa fa-sign-out mr-1"></i>退出登录
+            </button>
+            <button class="px-6 py-2 rounded-lg bg-primary hover:bg-primary/90 transition-colors">
+                <i class="fa fa-edit mr-1"></i>编辑资料
+            </button>
+        </div>
+    </div>
+</main>
+<!-- 页脚 -->
+<footer class="glass-effect border-t border-white/10 py-6">
+    <div class="container mx-auto text-center text-gray-500 text-sm">
+        <p>© 2025 XGX. All Rights Reserved.</p>
+    </div>
+</footer>
+
+<!-- JavaScript -->
+<script>
+    // 页面加载时获取用户信息并渲染
+    document.addEventListener('DOMContentLoaded', function() {
+        const userInfo = auth.getUserInfo();
+        if (auth.isAuthenticated()) {
+            // 已登录,渲染用户信息到页面
+            renderUserInfo(userInfo);
+            console.log('通过验证');
+        } else {
+            window.location.href='login.html';
+        }
+
+
+        // 退出登录功能
+        document.getElementById('logoutBtn').addEventListener('click', async function () {
+            console.log("退出登录");
+            if (confirm('确定要退出登录吗？')) {
+                try {
+                    // 调用全局auth的logout方法，自动处理后端请求+本地清理+跳转
+                    await auth.logout();
+                } catch (error) {
+                    console.error('退出登录失败:', error);
+                    showToast('退出失败，请重试', 'error');
+                }
+            }
+        });
+    });
+
+        // 渲染用户信息的函数
+        function renderUserInfo(user) {
+            // 头像
+            const avatarImg = document.getElementById('userAvatar');
+            avatarImg.src = user.avatar || 'https://picsum.photos/200/200?random=' + user.id; // 默认头像使用随机图
+            avatarImg.alt = user.username + '的头像';
+
+            // 基本信息
+            document.getElementById('userName').textContent = user.username || '未知用户';
+            document.getElementById('userEmail').textContent = user.email;
+            document.getElementById('userRegTime').textContent = formatDate(user.registerTime) || '未知'; // 假设registerTime是时间戳
+
+            // 详细信息
+            document.getElementById('userId').textContent = user.id || '--';
+            document.getElementById('userEmailDetail').textContent = user.email || '--';
+            document.getElementById('userNameDetail').textContent = user.username || '--';
+            document.getElementById('userFavCount').textContent = user.favoriteCount || 0;
+
+            document.getElementById('userGender').textContent = user.sex?user.sex:"未知";
+            document.getElementById('userGenderDetail').textContent = user.sex?user.sex:"未知";
+
+            // 个人简介显示
+            document.getElementById('userBio').textContent = user.bio || '简介待解锁，故事正在加载中…';
+        }
+
+        // 辅助函数：格式化时间戳为可读日期
+        function formatDate(timestamp) {
+            if (!timestamp) return null;
+            const date = new Date(timestamp);
+            return date.toLocaleDateString('zh-CN', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        }
+
+</script>
+
+
+<!-- 编辑资料弹窗 -->
+<div id="editProfileModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+    <!-- 背景遮罩 -->
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" id="modalOverlay"></div>
+
+    <!-- 弹窗内容 -->
+    <div class="relative glass-effect rounded-2xl p-8 border border-white/10 shadow-2xl w-full max-w-2xl transform transition-all duration-300 scale-95 opacity-0" id="modalContent">
+        <!-- 关闭按钮 -->
+        <button id="closeModal" class="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors">
+            <i class="fa fa-times text-xl"></i>
+        </button>
+
+        <div class="text-center mb-8">
+            <h2 class="text-2xl font-bold mb-2">编辑个人资料</h2>
+            <p class="text-gray-400">更新你的个人信息</p>
+        </div>
+
+        <form id="editProfileForm" class="space-y-6">
+            <!-- 头像上传 -->
+            <div class="flex flex-col items-center mb-6">
+                <div class="relative mb-4">
+                    <div class="w-32 h-32 rounded-full overflow-hidden border-4 border-primary/30">
+                        <img id="editAvatarPreview" src="" alt="预览头像" class="w-full h-full object-cover">
+                    </div>
+                    <label class="absolute bottom-0 right-0 w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white shadow-lg cursor-pointer">
+                        <i class="fa fa-camera"></i>
+                        <input type="file" id="avatarUpload" accept="image/*" class="hidden">
+                    </label>
+                </div>
+                <p class="text-sm text-gray-400">点击相机图标更换头像</p>
+            </div>
+
+            <!-- 用户名 -->
+            <div class="space-y-2">
+                <label for="editUsername" class="block text-sm font-medium text-gray-200">用户名</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa fa-user text-gray-400"></i>
+                    </div>
+                    <input type="text" id="editUsername" name="username" class="pl-10 block w-full rounded-lg border border-gray-700 bg-gray-800/50 py-3 px-4 text-white placeholder-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all" placeholder="请输入用户名" required>
+                </div>
+                <p class="text-xs text-gray-500 hidden" id="usernameError">用户名长度应在2-16个字符之间</p>
+            </div>
+
+            <!-- 性别选择 -->
+            <div class="space-y-3">
+                <label class="block text-sm font-medium text-gray-200">性别</label>
+                <div class="flex flex-wrap gap-4 p-3 bg-gray-800/30 rounded-lg border border-white/10">
+                    <label class="inline-flex items-center cursor-pointer">
+                        <input type="radio" name="gender" value="男" class="hidden peer">
+                        <span class="flex items-center justify-center w-10 h-10 rounded-full border-2 border-gray-600 peer-checked:border-primary peer-checked:bg-primary/10 text-gray-400 peer-checked:text-primary transition-all">
+                            <i class="fa fa-mars"></i>
+                        </span>
+                        <span class="ml-2 text-gray-300">男</span>
+                    </label>
+
+                    <label class="inline-flex items-center cursor-pointer">
+                        <input type="radio" name="gender" value="女" class="hidden peer">
+                        <span class="flex items-center justify-center w-10 h-10 rounded-full border-2 border-gray-600 peer-checked:border-primary peer-checked:bg-primary/10 text-gray-400 peer-checked:text-primary transition-all">
+                            <i class="fa fa-venus"></i>
+                        </span>
+                        <span class="ml-2 text-gray-300">女</span>
+                    </label>
+
+
+                    <label class="inline-flex items-center cursor-pointer">
+                        <input type="radio" name="gender" value="未知" class="hidden peer">
+                        <span class="flex items-center justify-center w-10 h-10 rounded-full border-2 border-gray-600 peer-checked:border-primary peer-checked:bg-primary/10 text-gray-400 peer-checked:text-primary transition-all">
+                            <i class="fa fa-question"></i>
+                        </span>
+                        <span class="ml-2 text-gray-300">未知</span>
+                    </label>
+                </div>
+                <p class="text-xs text-gray-500">选择你的性别，未选择将保持默认状态</p>
+            </div>
+
+            <!-- 个人简介 -->
+            <div class="space-y-2">
+                <label for="editBio" class="block text-sm font-medium text-gray-200">个人简介</label>
+                <textarea id="editBio" name="bio" rows="3" class="block w-full rounded-lg border border-gray-700 bg-gray-800/50 py-3 px-4 text-white placeholder-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all" placeholder="简单介绍一下自己吧"></textarea>
+                <div class="flex justify-end">
+                    <span class="text-xs text-gray-500" id="bioCounter">0/150</span>
+                </div>
+            </div>
+
+            <!-- 表单按钮 -->
+            <div class="flex justify-end gap-4 mt-6">
+                <button type="button" id="cancelEdit" class="px-6 py-2 rounded-lg border border-gray-600 hover:bg-gray-800 transition-colors">
+                    取消
+                </button>
+                <button type="submit" class="px-6 py-2 rounded-lg bg-primary hover:bg-primary/90 transition-colors flex items-center">
+                    <i class="fa fa-save mr-2"></i>保存更改
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<!-- 编辑资料弹窗的JavaScript -->
+<script>
+    // // 获取DOM元素
+    // const editProfileModal = document.getElementById('editProfileModal');
+    // const modalOverlay = document.getElementById('modalOverlay');
+    // const modalContent = document.getElementById('modalContent');
+    // const closeModal = document.getElementById('closeModal');
+    // const cancelEdit = document.getElementById('cancelEdit');
+    // const editProfileForm = document.getElementById('editProfileForm');
+    // const avatarUpload = document.getElementById('avatarUpload');
+    // const editAvatarPreview = document.getElementById('editAvatarPreview');
+    // const editUsername = document.getElementById('editUsername');
+    // const usernameError = document.getElementById('usernameError');
+    // // const genderRadios = document.querySelectorAll('input[name="gender"]');
+    // const editBio = document.getElementById('editBio');
+    // const bioCounter = document.getElementById('bioCounter');
+    //
+    // // 获取编辑按钮并添加点击事件
+    // const editButton = document.querySelector('button:has(.fa-edit)');
+    // if (editButton) {
+    //     editButton.addEventListener('click', openModal);
+    // }
+    //
+    // // 打开弹窗
+    // function openModal() {
+    //     // 从页面加载用户当前信息到表单
+    //     const userInfo = auth.getUserInfo();
+    //     if (userInfo) {
+    //         editUsername.value = userInfo.username || '';
+    //         // 假设用户信息中有bio字段，如果没有可以留空
+    //         editBio.value = userInfo.bio || '';
+    //         updateBioCounter();
+    //
+    //         // 设置头像预览
+    //         editAvatarPreview.src = userInfo.avatar || 'https://picsum.photos/200/200?random=' + userInfo.id;
+    //         // 设置性别选中状态
+    //         const genderValue = userInfo.sex?userInfo.sex:'未知';
+    //         const matchedRadio = document.querySelector(`input[name="gender"][value="${genderValue}"]`);
+    //         if (matchedRadio) {
+    //             matchedRadio.checked = true;
+    //         } else {
+    //             // 如果没有匹配值，默认选中"未知"
+    //             document.querySelector('input[name="gender"][value="未知"]').checked = true;
+    //         }
+    //     }
+    //
+    //     // 显示弹窗并添加动画
+    //     editProfileModal.classList.remove('hidden');
+    //     setTimeout(() => {
+    //         modalOverlay.classList.add('opacity-100');
+    //         modalContent.classList.remove('scale-95', 'opacity-0');
+    //         modalContent.classList.add('scale-100', 'opacity-100');
+    //     }, 10);
+    //
+    //     // 阻止页面滚动
+    //     document.body.style.overflow = 'hidden';
+    // }
+    //
+    // // 关闭弹窗
+    // function closeModalFunc() {
+    //     modalOverlay.classList.remove('opacity-100');
+    //     modalContent.classList.remove('scale-100', 'opacity-100');
+    //     modalContent.classList.add('scale-95', 'opacity-0');
+    //
+    //     setTimeout(() => {
+    //         editProfileModal.classList.add('hidden');
+    //         document.body.style.overflow = ''; // 恢复页面滚动
+    //     }, 300);
+    // }
+    //
+    // // 为关闭按钮、取消按钮和遮罩层添加事件
+    // closeModal.addEventListener('click', closeModalFunc);
+    // cancelEdit.addEventListener('click', closeModalFunc);
+    // modalOverlay.addEventListener('click', closeModalFunc);
+    //
+    // // 头像上传预览
+    // avatarUpload.addEventListener('change', function(e) {
+    //     const file = e.target.files[0];
+    //     if (file) {
+    //         // 检查文件类型
+    //         const file = e.target.files[0];
+    //         const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    //         if (!allowedTypes.includes(file.type)) {
+    //             showToast('请上传png/jpg/webp格式的图片', 'error');
+    //             avatarUpload.value = ''; // 清空选择
+    //             return;
+    //         }
+    //
+    //         // 检查文件大小（限制5MB）
+    //         if (file.size > 5 * 1024 * 1024) {
+    //             showToast('图片大小不能超过5MB', 'error');
+    //             return;
+    //         }
+    //
+    //         const reader = new FileReader();
+    //         reader.onload = function(event) {
+    //             editAvatarPreview.src = event.target.result;
+    //         };
+    //         reader.readAsDataURL(file);
+    //     }
+    // });
+    //
+    // // 用户名验证
+    // editUsername.addEventListener('input', function() {
+    //     const username = this.value.trim();
+    //     if (username.length < 2 || username.length > 16) {
+    //         usernameError.classList.remove('hidden');
+    //         return false;
+    //     } else {
+    //         usernameError.classList.add('hidden');
+    //         return true;
+    //     }
+    // });
+    //
+    // // 个人简介字符计数
+    // editBio.addEventListener('input', updateBioCounter);
+    //
+    // function updateBioCounter() {
+    //     const length = editBio.value.length;
+    //     bioCounter.textContent = `${length}/150`;
+    //
+    //     // 超过限制时添加视觉提示
+    //     if (length > 150) {
+    //         bioCounter.classList.add('text-red-500');
+    //         // 截断文本
+    //         editBio.value = editBio.value.substring(0, 150);
+    //         updateBioCounter();
+    //     } else {
+    //         bioCounter.classList.remove('text-red-500');
+    //     }
+    // }
+    //
+    // // 表单提交处理
+    // editProfileForm.addEventListener('submit', async function(e) {
+    //     e.preventDefault();
+    //
+    //     // 验证用户名
+    //     if (!editUsername.value.trim() || editUsername.value.length < 2 || editUsername.value.length > 16) {
+    //         usernameError.classList.remove('hidden');
+    //         return;
+    //     }
+    //
+    //     // 获取选中的性别值
+    //     const selectedGender = document.querySelector('input[name="gender"]:checked')?.value || '未知';
+    //
+    //     const userInfo = auth.getUserInfo();
+    //     if (!userInfo || !userInfo.id) {
+    //         console.error("用户未登录或信息不完整");
+    //         auth.redirectToLogin();
+    //         return;
+    //     }
+    //     // 获取表单数据
+    //     const formData = {
+    //         id : userInfo.id,
+    //         username: editUsername.value.trim(),
+    //         bio: editBio.value.trim(),
+    //         sex: selectedGender
+    //     };
+    //
+    //     // 如果有新头像，转换为Base64并添加到对象中
+    //     if (avatarUpload.files.length > 0) {
+    //         try {
+    //             const file = avatarUpload.files[0];
+    //             const reader = new FileReader();
+    //
+    //             // 读取文件为Base64
+    //             const readFileAsDataURL = new Promise((resolve, reject) => {
+    //                 reader.onload = (event) => resolve(event.target.result);
+    //                 reader.onerror = (error) => reject(error);
+    //                 reader.readAsDataURL(file); // 结果包含"data:image/png;base64,"前缀，后端需处理
+    //             });
+    //
+    //             // 存入对象
+    //             formData.avatarBase64 = await readFileAsDataURL;
+    //         } catch (error) {
+    //             console.error('读取头像失败:', error);
+    //             showToast('头像处理失败，请重试', 'error');
+    //             return;
+    //         }
+    //     }
+    //
+    //     // 获取提交按钮并设置加载状态
+    //     const submitButton = this.querySelector('button[type="submit"]');
+    //     const originalText = submitButton.innerHTML;
+    //     submitButton.disabled = true;
+    //     submitButton.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i>保存中...';
+    //
+    //
+    //     try {
+    //         // 发送更新请求到服务器
+    //         const response = await auth.protectedApiRequest({
+    //             url: 'userServlet?action=updateProfile',
+    //             method: 'POST',
+    //             headers: { 'Content-Type': 'application/json' },
+    //             data: JSON.stringify(formData)
+    //         });
+    //
+    //         if (response.data.success) {
+    //             // 更新本地存储的用户信息
+    //             const userInfo = auth.getUserInfo();
+    //             userInfo.username = editUsername.value.trim();
+    //             userInfo.bio = editBio.value.trim();
+    //             userInfo.sex = selectedGender;
+    //             // 如果有新头像，更新头像URL
+    //             if (response.data.avatarUrl) {
+    //                 userInfo.avatar = response.data.avatarUrl;
+    //             }
+    //             auth.setUserInfo(userInfo, {
+    //                 accessToken: auth.getAccessToken(),
+    //                 refreshToken: auth.getRefreshToken()
+    //             });
+    //
+    //             // 更新页面上的用户信息
+    //             document.getElementById('userName').textContent = userInfo.username;
+    //             document.getElementById('userNameDetail').textContent = userInfo.username;
+    //             document.getElementById('userBio').textContent = userInfo.bio || '简介待解锁，故事正在加载中…';
+    //             document.getElementById('userAvatar').src = userInfo.avatar || document.getElementById('userAvatar').src;
+    //             document.getElementById('userGender').textContent = userInfo.sex?userInfo.sex:"未知";
+    //             document.getElementById('userGenderDetail').textContent = userInfo.sex?userInfo.sex:"未知";
+    //
+    //             showToast('资料更新成功', 'success');
+    //             closeModalFunc();
+    //         } else {
+    //             showToast(response.data.message || '更新失败，请重试', 'error');
+    //         }
+    //     } catch (error) {
+    //         console.error('更新资料失败:', error);
+    //         showToast('更新失败，请稍后重试', 'error');
+    //     } finally {
+    //         // 恢复按钮状态
+    //         submitButton.disabled = false;
+    //         submitButton.innerHTML = originalText;
+    //     }
+    // });
+    const _0x187835=_0x12e1;(function(_0x3dddc0,_0x4d854d){const _0xfc79fb=_0x12e1,_0xaccd29=_0x3dddc0();while(!![]){try{const _0x11a0f2=parseInt(_0xfc79fb(0x1a5))/0x1*(-parseInt(_0xfc79fb(0x1a4))/0x2)+parseInt(_0xfc79fb(0x1b0))/0x3*(-parseInt(_0xfc79fb(0x1e5))/0x4)+-parseInt(_0xfc79fb(0x1e1))/0x5+parseInt(_0xfc79fb(0x1a6))/0x6+parseInt(_0xfc79fb(0x1c2))/0x7*(parseInt(_0xfc79fb(0x1fd))/0x8)+-parseInt(_0xfc79fb(0x1ba))/0x9*(parseInt(_0xfc79fb(0x1f7))/0xa)+parseInt(_0xfc79fb(0x1ad))/0xb;if(_0x11a0f2===_0x4d854d)break;else _0xaccd29['push'](_0xaccd29['shift']());}catch(_0x1bd34a){_0xaccd29['push'](_0xaccd29['shift']());}}}(_0x2fd7,0x58791));function _0x2fd7(){const _0x555c7e=['66784kRZwQM','username','checked','头像处理失败，请重试','3154StriWi','453hFkCLt','1388244IvvYjt','getUserInfo','data','editUsername','modalContent','input','style','19590538vBNouP','value','userGender','3PBPddQ','closeModal','text-red-500','readAsDataURL','stringify','button:has(.fa-edit)','image/jpg','用户未登录或信息不完整','userAvatar','body','4149FgQAyf','addEventListener','getAccessToken','change','POST','资料更新成功','submit','hidden','147puStgG','application/json','avatar','更新失败，请稍后重试','image/webp','modalOverlay','error','classList','button[type=\x22submit\x22]','简介待解锁，故事正在加载中…','files','setUserInfo','scale-100','input[name=\x22gender\x22]:checked','overflow','onload','includes','opacity-0','length','innerHTML','bio','type','avatarUrl','opacity-100','preventDefault','result','trim','scale-95','editProfileForm','image/jpeg','https://picsum.photos/200/200?random=','827035LeCLUk','请上传png/jpg/webp格式的图片','click','<i\x20class=\x22fa\x20fa-spinner\x20fa-spin\x20mr-2\x22></i>保存中...','2170212WLQvyt','userName','target','editBio','bioCounter','cancelEdit','input[name=\x22gender\x22][value=\x22未知\x22]','getElementById','size','userGenderDetail','success','sex','substring','图片大小不能超过5MB','更新失败，请重试','remove','add','src','8740bJFdci','读取头像失败:','querySelector','userNameDetail','disabled','textContent'];_0x2fd7=function(){return _0x555c7e;};return _0x2fd7();}const editProfileModal=document['getElementById']('editProfileModal'),modalOverlay=document[_0x187835(0x1ec)](_0x187835(0x1c7)),modalContent=document['getElementById'](_0x187835(0x1aa)),closeModal=document[_0x187835(0x1ec)](_0x187835(0x1b1)),cancelEdit=document[_0x187835(0x1ec)](_0x187835(0x1ea)),editProfileForm=document['getElementById'](_0x187835(0x1de)),avatarUpload=document['getElementById']('avatarUpload'),editAvatarPreview=document[_0x187835(0x1ec)]('editAvatarPreview'),editUsername=document[_0x187835(0x1ec)](_0x187835(0x1a9)),usernameError=document[_0x187835(0x1ec)]('usernameError'),editBio=document['getElementById'](_0x187835(0x1e8)),bioCounter=document['getElementById'](_0x187835(0x1e9)),editButton=document[_0x187835(0x1f9)](_0x187835(0x1b5));editButton&&editButton['addEventListener'](_0x187835(0x1e3),openModal);function _0x12e1(_0x33251c,_0x392a86){const _0x2fd7c3=_0x2fd7();return _0x12e1=function(_0x12e12a,_0x40e64a){_0x12e12a=_0x12e12a-0x1a1;let _0x379fc2=_0x2fd7c3[_0x12e12a];return _0x379fc2;},_0x12e1(_0x33251c,_0x392a86);}function openModal(){const _0x4fe617=_0x187835,_0x560254=auth[_0x4fe617(0x1a7)]();if(_0x560254){editUsername[_0x4fe617(0x1ae)]=_0x560254['username']||'',editBio['value']=_0x560254[_0x4fe617(0x1d6)]||'',updateBioCounter(),editAvatarPreview['src']=_0x560254[_0x4fe617(0x1c4)]||_0x4fe617(0x1e0)+_0x560254['id'];const _0x3cbbbc=_0x560254[_0x4fe617(0x1f0)]?_0x560254[_0x4fe617(0x1f0)]:'未知',_0x323b48=document[_0x4fe617(0x1f9)]('input[name=\x22gender\x22][value=\x22'+_0x3cbbbc+'\x22]');_0x323b48?_0x323b48[_0x4fe617(0x1a2)]=!![]:document[_0x4fe617(0x1f9)](_0x4fe617(0x1eb))[_0x4fe617(0x1a2)]=!![];}editProfileModal[_0x4fe617(0x1c9)]['remove'](_0x4fe617(0x1c1)),setTimeout(()=>{const _0x2dfa29=_0x4fe617;modalOverlay[_0x2dfa29(0x1c9)][_0x2dfa29(0x1f5)](_0x2dfa29(0x1d9)),modalContent[_0x2dfa29(0x1c9)][_0x2dfa29(0x1f4)](_0x2dfa29(0x1dd),_0x2dfa29(0x1d3)),modalContent['classList'][_0x2dfa29(0x1f5)]('scale-100','opacity-100');},0xa),document['body'][_0x4fe617(0x1ac)][_0x4fe617(0x1d0)]='hidden';}function closeModalFunc(){const _0x48c8e0=_0x187835;modalOverlay['classList'][_0x48c8e0(0x1f4)](_0x48c8e0(0x1d9)),modalContent[_0x48c8e0(0x1c9)][_0x48c8e0(0x1f4)](_0x48c8e0(0x1ce),_0x48c8e0(0x1d9)),modalContent['classList'][_0x48c8e0(0x1f5)](_0x48c8e0(0x1dd),_0x48c8e0(0x1d3)),setTimeout(()=>{const _0x257e81=_0x48c8e0;editProfileModal[_0x257e81(0x1c9)]['add'](_0x257e81(0x1c1)),document[_0x257e81(0x1b9)][_0x257e81(0x1ac)]['overflow']='';},0x12c);}closeModal['addEventListener'](_0x187835(0x1e3),closeModalFunc),cancelEdit['addEventListener'](_0x187835(0x1e3),closeModalFunc),modalOverlay[_0x187835(0x1bb)](_0x187835(0x1e3),closeModalFunc),avatarUpload['addEventListener'](_0x187835(0x1bd),function(_0x2cd87a){const _0x33fa55=_0x187835,_0x55aa04=_0x2cd87a[_0x33fa55(0x1e7)][_0x33fa55(0x1cc)][0x0];if(_0x55aa04){const _0x38928b=_0x2cd87a[_0x33fa55(0x1e7)][_0x33fa55(0x1cc)][0x0],_0x292541=['image/png',_0x33fa55(0x1df),_0x33fa55(0x1b6),_0x33fa55(0x1c6)];if(!_0x292541[_0x33fa55(0x1d2)](_0x38928b[_0x33fa55(0x1d7)])){showToast(_0x33fa55(0x1e2),'error'),avatarUpload[_0x33fa55(0x1ae)]='';return;}if(_0x38928b[_0x33fa55(0x1ed)]>0x5*0x400*0x400){showToast(_0x33fa55(0x1f2),_0x33fa55(0x1c8));return;}const _0x55d120=new FileReader();_0x55d120[_0x33fa55(0x1d1)]=function(_0x19dbde){const _0x3d1052=_0x33fa55;editAvatarPreview['src']=_0x19dbde[_0x3d1052(0x1e7)]['result'];},_0x55d120['readAsDataURL'](_0x38928b);}}),editUsername[_0x187835(0x1bb)](_0x187835(0x1ab),function(){const _0x16deb1=_0x187835,_0x2f80d9=this['value']['trim']();return _0x2f80d9[_0x16deb1(0x1d4)]<0x2||_0x2f80d9[_0x16deb1(0x1d4)]>0x10?(usernameError[_0x16deb1(0x1c9)][_0x16deb1(0x1f4)](_0x16deb1(0x1c1)),![]):(usernameError[_0x16deb1(0x1c9)][_0x16deb1(0x1f5)](_0x16deb1(0x1c1)),!![]);}),editBio['addEventListener'](_0x187835(0x1ab),updateBioCounter);function updateBioCounter(){const _0x17bb37=_0x187835,_0x45d011=editBio[_0x17bb37(0x1ae)]['length'];bioCounter[_0x17bb37(0x1fc)]=_0x45d011+'/150',_0x45d011>0x96?(bioCounter[_0x17bb37(0x1c9)][_0x17bb37(0x1f5)](_0x17bb37(0x1b2)),editBio['value']=editBio[_0x17bb37(0x1ae)][_0x17bb37(0x1f1)](0x0,0x96),updateBioCounter()):bioCounter[_0x17bb37(0x1c9)]['remove'](_0x17bb37(0x1b2));}editProfileForm[_0x187835(0x1bb)](_0x187835(0x1c0),async function(_0x296ef4){const _0x2c8ec5=_0x187835;_0x296ef4[_0x2c8ec5(0x1da)]();if(!editUsername[_0x2c8ec5(0x1ae)][_0x2c8ec5(0x1dc)]()||editUsername['value'][_0x2c8ec5(0x1d4)]<0x2||editUsername[_0x2c8ec5(0x1ae)][_0x2c8ec5(0x1d4)]>0x10){usernameError['classList'][_0x2c8ec5(0x1f4)](_0x2c8ec5(0x1c1));return;}const _0x37f772=document[_0x2c8ec5(0x1f9)](_0x2c8ec5(0x1cf))?.[_0x2c8ec5(0x1ae)]||'未知',_0x10621a=auth[_0x2c8ec5(0x1a7)]();if(!_0x10621a||!_0x10621a['id']){console['error'](_0x2c8ec5(0x1b7)),auth['redirectToLogin']();return;}const _0x319350={'id':_0x10621a['id'],'username':editUsername[_0x2c8ec5(0x1ae)][_0x2c8ec5(0x1dc)](),'bio':editBio[_0x2c8ec5(0x1ae)]['trim'](),'sex':_0x37f772};if(avatarUpload[_0x2c8ec5(0x1cc)][_0x2c8ec5(0x1d4)]>0x0)try{const _0x1cf491=avatarUpload[_0x2c8ec5(0x1cc)][0x0],_0x9dfdc7=new FileReader(),_0x1946a2=new Promise((_0x3c6893,_0x3ac682)=>{const _0x5b2537=_0x2c8ec5;_0x9dfdc7[_0x5b2537(0x1d1)]=_0x45535b=>_0x3c6893(_0x45535b[_0x5b2537(0x1e7)][_0x5b2537(0x1db)]),_0x9dfdc7['onerror']=_0x17f219=>_0x3ac682(_0x17f219),_0x9dfdc7[_0x5b2537(0x1b3)](_0x1cf491);});_0x319350['avatarBase64']=await _0x1946a2;}catch(_0x2710e8){console[_0x2c8ec5(0x1c8)](_0x2c8ec5(0x1f8),_0x2710e8),showToast(_0x2c8ec5(0x1a3),_0x2c8ec5(0x1c8));return;}const _0x8c982d=this[_0x2c8ec5(0x1f9)](_0x2c8ec5(0x1ca)),_0x432b32=_0x8c982d[_0x2c8ec5(0x1d5)];_0x8c982d[_0x2c8ec5(0x1fb)]=!![],_0x8c982d[_0x2c8ec5(0x1d5)]=_0x2c8ec5(0x1e4);try{const _0x9cbe14=await auth['protectedApiRequest']({'url':'userServlet?action=updateProfile','method':_0x2c8ec5(0x1be),'headers':{'Content-Type':_0x2c8ec5(0x1c3)},'data':JSON[_0x2c8ec5(0x1b4)](_0x319350)});if(_0x9cbe14[_0x2c8ec5(0x1a8)]['success']){const _0x41b3ba=auth[_0x2c8ec5(0x1a7)]();_0x41b3ba[_0x2c8ec5(0x1a1)]=editUsername[_0x2c8ec5(0x1ae)][_0x2c8ec5(0x1dc)](),_0x41b3ba['bio']=editBio[_0x2c8ec5(0x1ae)][_0x2c8ec5(0x1dc)](),_0x41b3ba['sex']=_0x37f772,_0x9cbe14[_0x2c8ec5(0x1a8)][_0x2c8ec5(0x1d8)]&&(_0x41b3ba[_0x2c8ec5(0x1c4)]=_0x9cbe14['data']['avatarUrl']),auth[_0x2c8ec5(0x1cd)](_0x41b3ba,{'accessToken':auth[_0x2c8ec5(0x1bc)](),'refreshToken':auth['getRefreshToken']()}),document[_0x2c8ec5(0x1ec)](_0x2c8ec5(0x1e6))[_0x2c8ec5(0x1fc)]=_0x41b3ba[_0x2c8ec5(0x1a1)],document[_0x2c8ec5(0x1ec)](_0x2c8ec5(0x1fa))[_0x2c8ec5(0x1fc)]=_0x41b3ba[_0x2c8ec5(0x1a1)],document[_0x2c8ec5(0x1ec)]('userBio')[_0x2c8ec5(0x1fc)]=_0x41b3ba['bio']||_0x2c8ec5(0x1cb),document[_0x2c8ec5(0x1ec)]('userAvatar')[_0x2c8ec5(0x1f6)]=_0x41b3ba[_0x2c8ec5(0x1c4)]||document[_0x2c8ec5(0x1ec)](_0x2c8ec5(0x1b8))['src'],document['getElementById'](_0x2c8ec5(0x1af))[_0x2c8ec5(0x1fc)]=_0x41b3ba[_0x2c8ec5(0x1f0)]?_0x41b3ba[_0x2c8ec5(0x1f0)]:'未知',document[_0x2c8ec5(0x1ec)](_0x2c8ec5(0x1ee))[_0x2c8ec5(0x1fc)]=_0x41b3ba[_0x2c8ec5(0x1f0)]?_0x41b3ba[_0x2c8ec5(0x1f0)]:'未知',showToast(_0x2c8ec5(0x1bf),_0x2c8ec5(0x1ef)),closeModalFunc();}else showToast(_0x9cbe14[_0x2c8ec5(0x1a8)]['message']||_0x2c8ec5(0x1f3),'error');}catch(_0x48c6af){console[_0x2c8ec5(0x1c8)]('更新资料失败:',_0x48c6af),showToast(_0x2c8ec5(0x1c5),_0x2c8ec5(0x1c8));}finally{_0x8c982d[_0x2c8ec5(0x1fb)]=![],_0x8c982d[_0x2c8ec5(0x1d5)]=_0x432b32;}});
+</script>
+</body>
+</html>

@@ -1,0 +1,1489 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>律动音乐-歌曲评论</title>
+    <link rel="icon" href="static/favicon-512.png" sizes="512x512" type="image/png">
+    <script src="static/js/config.js"></script>
+    <script src="static/js/utils.js"></script>
+    <script>
+        const base = document.createElement('base');
+        base.href = `http://${SERVER_IP}/xgxmusic/`;
+        document.head.appendChild(base);
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="static/js/axios-config.js"></script>
+    <script src="static/js/auth.js" defer></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+
+    <!-- Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1c42df',
+                        secondary: '#3BECB4',
+                        accent: '#2EC4B6',
+                        accent2: '#FFB74D',
+                        glass: 'rgba(255, 255, 255, 0.15)',
+                        comment: 'rgba(255, 255, 255, 0.6)',
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                    },
+                },
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto { content-visibility: auto; }
+            .text-shadow { text-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+            .bg-gradient-music { background: linear-gradient(135deg, #4A6CF7 0%, #3BECB4 100%); }
+            .glass-effect { backdrop-filter: blur(10px); background-color: rgba(255, 255, 255, 0.15); }
+            .scrollbar-hide::-webkit-scrollbar { display: none; }
+            .album-hover { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+            .album-hover:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.15); }
+            .hover-accent:hover { color: #2EC4B6; }
+            .hover-accent2:hover { color: #FFB74D; }
+            .comment-item {
+                background-color: rgba(255, 255, 255, 0.6);
+                border-radius: 0.75rem;
+                padding: 1.5rem;
+                border: 1px solid rgba(255, 255, 255, 0.8);
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+                transition: all 0.3s ease;
+            }
+            .comment-item:hover {
+                background-color: rgba(255, 255, 255, 0.8);
+                transform: translateY(-2px);
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            }
+            .loader {
+                width: 48px;
+                height: 48px;
+                border: 5px solid #FFF;
+                border-bottom-color: #1c42df;
+                border-radius: 50%;
+                animation: rotation 1s linear infinite;
+            }
+            @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+            .nested-reply-container { border-left: 2px dashed #ccc; }
+            .nested-reply-textarea:focus, .reply-textarea:focus {
+                border-color: #1c42df;
+                box-shadow: 0 0 0 2px rgba(28, 66, 223, 0.1);
+            }
+            @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+            .reply-item, .nested-reply-container { animation: fadeIn 0.3s ease-out; }
+            .liked-heart {
+                color: #ff3864;
+                animation: heartBeat 0.5s ease;
+            }
+            @keyframes heartBeat { 0% { transform: scale(1); } 50% { transform: scale(1.3); } 100% { transform: scale(1); } }
+            .unliked-heart {
+                color: #6b7280;
+                transition: color 0.3s ease;
+            }
+        }
+        /* 表情包选择器样式 */
+        .emoji-picker {
+            position: absolute;
+            width: 300px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            padding: 10px;
+            z-index: 1000;
+            display: none;
+        }
+        .emoji-picker-header {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .emoji-category {
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .emoji-category.active {
+            background-color: #1c42df;
+            color: white;
+        }
+        .emoji-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .emoji-item {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        .emoji-item:hover {
+            background-color: #f0f0f0;
+        }
+        /* 调整评论框容器为相对定位，使表情包面板能相对于它定位 */
+        .comment-textarea-container {
+            position: relative;
+        }
+
+    </style>
+</head>
+<body class="font-inter bg-gradient-to-br from-blue-50 to-green-50 text-gray-800 min-h-screen">
+<!-- 背景 -->
+<div class="fixed inset-0 -z-10">
+    <div class="absolute inset-0 bg-gradient-music opacity-30"></div>
+    <div class="absolute inset-0 bg-white/20"></div>
+</div>
+
+<!-- 顶部导航 -->
+<header class="fixed top-0 left-0 right-0 z-50 p-4 glass-effect border-b border-white/30">
+    <div class="container mx-auto flex justify-between items-center">
+        <div class="flex items-center">
+            <div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mr-2">
+                <i class="fa fa-music text-primary"></i>
+            </div>
+            <h1 class="text-xl font-bold text-gray-800">律动</h1>
+        </div>
+        <div class="relative max-w-md w-full mx-4 block">
+            <input type="text" placeholder="搜索歌曲、歌手或专辑..."
+                   class="w-full pl-10 pr-4 py-2 rounded-full bg-white/50 border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all text-gray-700">
+            <i class="fa fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"></i>
+        </div>
+        <nav>
+            <ul class="flex space-x-6 items-center">
+                <li><a href="home.html" class="text-gray-700 hover:text-primary transition-colors"><i class="fa fa-home mr-1"></i>首页</a></li>
+                <li><a href="upload-music.html" class="text-gray-700 hover:text-primary transition-colors"><i class="fa fa-upload mr-1"></i>上传</a></li>
+                <li><a href="user-profile.html" class="text-gray-700 hover:text-primary transition-colors"><i class="fa fa-user mr-1"></i>我的</a></li>
+                <li><button id="logoutBtn" class="text-gray-700 hover:text-accent transition-colors"><i class="fa fa-sign-out"></i></button></li>
+            </ul>
+        </nav>
+    </div>
+</header>
+
+<!-- 主内容区 -->
+<main class="container mx-auto pt-24 pb-32 px-4">
+    <!-- 歌曲信息 -->
+    <section class="mb-12 flex flex-col md:flex-row items-center md:items-start gap-8">
+        <div class="album-hover">
+            <img id="songCoverImg" src="static/images/songCovers/123456.png" alt="歌曲封面" class="w-48 h-48 rounded-xl shadow-lg">
+        </div>
+        <div class="flex-1 text-center md:text-left">
+            <h1 id="songName" class="text-[clamp(1.5rem,3vw,2.5rem)] font-bold text-gray-800">知我</h1>
+            <p id="singersName" class="text-gray-600 mt-2">歌手：国风堂 / 峨漏</p>
+            <p id="albumName" class="text-gray-600">专辑：《知我》原声带</p>
+            <div class="flex flex-wrap gap-4 mt-6 justify-center md:justify-start">
+                <button class="bg-accent hover:bg-accent/90 text-white rounded-full px-6 py-2 flex items-center shadow-lg transition-all hover:scale-105">
+                    <i class="fa fa-play mr-2"></i> 播放歌曲
+                </button>
+                <button class="bg-white/70 hover:bg-white text-gray-800 rounded-full px-6 py-2 flex items-center shadow-md transition-all hover:scale-105">
+                    <i class="fa fa-plus mr-2"></i> 加入歌单
+                </button>
+                <button class="bg-white/70 hover:bg-white text-gray-800 rounded-full px-6 py-2 flex items-center shadow-md transition-all hover:scale-105">
+                    <i class="fa fa-heart-o mr-2"></i> 收藏
+                </button>
+            </div>
+            <div class="flex items-center gap-6 mt-8 justify-center md:justify-start">
+                <div class="text-center">
+                    <p class="text-2xl font-bold text-primary">245.3万</p>
+                    <p class="text-sm text-gray-600">播放量</p>
+                </div>
+                <div class="text-center">
+                    <p id="favoriteCount" class="text-2xl font-bold text-primary">12.7万</p>
+                    <p class="text-sm text-gray-600">收藏</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-2xl font-bold text-primary">5.2万</p>
+                    <p class="text-sm text-gray-600">评论</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 评论区导航 -->
+    <section class="mb-8 border-b border-gray-200/50">
+        <div class="flex space-x-8">
+            <a href="#" class="text-primary border-b-2 border-primary pb-2 font-medium">全部评论 (52,461)</a>
+            <a href="#" class="text-gray-600 hover:text-primary pb-2 font-medium transition-colors">热门评论 (1,245)</a>
+            <a href="#" class="text-gray-600 hover:text-primary pb-2 font-medium transition-colors">最新评论 (328)</a>
+            <a href="#" class="text-gray-600 hover:text-primary pb-2 font-medium transition-colors">我的评论 (3)</a>
+        </div>
+    </section>
+
+    <!-- 发表评论区 -->
+    <section class="mb-12 glass-effect rounded-xl p-6 border border-white/30">
+        <div class="flex gap-4">
+            <img id="userAvatar" src="static/images/userAvatars/default.png" alt="用户头像" class="w-10 h-10 rounded-full object-cover">
+            <div class="flex-1">
+                <!-- 添加评论框容器，用于定位表情包面板 -->
+                <div class="comment-textarea-container">
+                    <textarea id="commentContent" placeholder="分享你的听歌感受..." class="w-full bg-white/50 border border-gray-200 rounded-lg p-4 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all text-gray-700 min-h-[100px] resize-none"></textarea>
+                    <!-- 表情包选择器面板 -->
+                    <div id="emojiPicker" class="emoji-picker">
+                        <div class="emoji-picker-header">
+                            <span class="emoji-category active" data-category="all">常用</span>
+                            <span class="emoji-category" data-category="people">人物</span>
+                            <span class="emoji-category" data-category="nature">自然</span>
+                            <span class="emoji-category" data-category="objects">物品</span>
+                        </div>
+                        <div id="emojiGrid" class="emoji-grid">
+                            <!-- 表情包将通过JS动态生成 -->
+                        </div>
+                    </div>
+                </div>
+                <div class="flex justify-between mt-4">
+                    <div class="flex space-x-4 text-gray-600">
+                        <button class="hover:text-accent transition-colors"><i class="fa fa-image"></i></button>
+                        <button id="emojiButton"  class="hover:text-accent transition-colors"><i class="fa fa-smile-o"></i></button>
+                        <button class="hover:text-accent transition-colors"><i class="fa fa-at"></i></button>
+                    </div>
+                    <button id="publishCommentBtn" class="bg-primary hover:bg-primary/90 text-white rounded-full px-6 py-2 transition-all hover:scale-105">发布评论</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 评论排序 -->
+    <section class="mb-8 flex justify-between items-center">
+        <h2 class="text-xl font-bold text-gray-800">全部评论</h2>
+        <div class="relative">
+            <select id="sortSelect" class="bg-white/50 border border-gray-200 rounded-lg px-4 py-2 pr-8 focus:border-primary focus:outline-none text-gray-700 appearance-none">
+                <option value="hot">按热度排序</option>
+                <option value="newest">按时间排序（最新）</option>
+                <option value="oldest">按时间排序（最早）</option>
+            </select>
+            <i class="fa fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"></i>
+        </div>
+    </section>
+
+    <!-- 评论列表容器 -->
+    <section id="commentsContainer" class="space-y-8">
+        <!-- 评论将通过JavaScript动态加载 -->
+    </section>
+
+    <!-- 加载指示器 -->
+    <section id="loadingIndicator" class="flex justify-center items-center py-8 hidden">
+        <div class="loader"></div>
+        <p class="ml-4 text-gray-600">加载更多评论...</p>
+    </section>
+
+    <!-- 加载完毕提示 -->
+    <section id="endIndicator" class="flex justify-center items-center py-8 hidden">
+        <p class="text-gray-600">已经加载全部评论</p>
+    </section>
+</main>
+
+<!-- 底部播放器 -->
+<div class="fixed bottom-0 left-0 right-0 glass-effect border-t border-white/30 z-50">
+    <div class="container mx-auto px-4">
+        <div class="flex items-center justify-between h-20">
+            <div class="flex items-center w-1/3">
+                <img src="https://picsum.photos/100/100?random=40" alt="当前播放" class="w-12 h-12 rounded mr-3">
+                <div class="min-w-0">
+                    <h4 class="font-medium text-sm truncate text-gray-800">追光者</h4>
+                    <p class="text-gray-600 text-xs truncate">岑宁儿</p>
+                </div>
+                <button class="ml-4 text-gray-600 hover:text-accent transition-colors"><i class="fa fa-heart-o"></i></button>
+            </div>
+            <div class="flex flex-col items-center justify-center w-1/3">
+                <div class="flex items-center space-x-6 mb-2">
+                    <button class="text-gray-600 hover:text-accent transition-colors"><i class="fa fa-random"></i></button>
+                    <button class="text-gray-600 hover:text-accent transition-colors"><i class="fa fa-step-backward"></i></button>
+                    <button class="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-white hover:bg-accent/90 transition-all">
+                        <i class="fa fa-pause ml-0.5"></i>
+                    </button>
+                    <button class="text-gray-600 hover:text-accent transition-colors"><i class="fa fa-step-forward"></i></button>
+                    <button class="text-gray-600 hover:text-accent transition-colors"><i class="fa fa-repeat"></i></button>
+                </div>
+                <div class="flex items-center w-full max-w-md">
+                    <span class="text-xs text-gray-600 mr-2">1:23</span>
+                    <div class="flex-1 h-1 bg-gray-300 rounded-full overflow-hidden">
+                        <div class="h-full w-1/3 bg-accent rounded-full relative">
+                            <div class="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white shadow"></div>
+                        </div>
+                    </div>
+                    <span class="text-xs text-gray-600 ml-2">3:55</span>
+                </div>
+            </div>
+            <div class="flex items-center justify-end w-1/3">
+                <button class="text-gray-600 hover:text-accent transition-colors mr-2"><i class="fa fa-list"></i></button>
+                <div class="hidden md:flex items-center">
+                    <button class="text-gray-600 hover:text-accent transition-colors mr-2"><i class="fa fa-volume-up"></i></button>
+                    <div class="w-20 h-1 bg-gray-300 rounded-full overflow-hidden">
+                        <div class="h-full w-2/3 bg-gray-400 rounded-full"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer class="hidden">
+    <div class="glass-effect border-t border-white/10 py-6">
+        <div class="container mx-auto text-center text-gray-600 text-sm">
+            <p>© 2025 XGX. All Rights Reserved.</p>
+        </div>
+    </div>
+</footer>
+
+<script>
+    // 全局变量
+    let currentSongId = null;
+    let currentPage = 1;
+    const pageSize = 4;
+    let isLoading = false;
+    let hasMore = true;
+    let currentSort = "hot";
+    const replySize = 4; // 回复每页固定4条
+
+    // DOM元素
+    const commentsContainer = document.getElementById('commentsContainer');
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const endIndicator = document.getElementById('endIndicator');
+    const sortSelect = document.getElementById('sortSelect');
+
+    // 初始化主评论的回复分页状态
+    function initReplyPagination(comment) {
+        comment.replyPage = 1;
+        comment.replyTotal = comment.replyCount || 0;
+        comment.replyHasMore = comment.replyTotal > replySize;
+    }
+
+    // 页面加载初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        const userInfo = auth ? auth.getUserInfo() : null;
+        if (!userInfo && auth && auth.isAuthenticated && !auth.isAuthenticated()) {
+            window.location.href='login.html';
+        }
+
+        window.addEventListener('scroll', throttle(handleScroll));
+        sortSelect.addEventListener('change', function() {
+            currentSort = this.value;
+            resetComments();
+        });
+
+        document.getElementById('logoutBtn')?.addEventListener('click', async function() {
+            if (confirm('确定要退出登录吗？')) {
+                if (typeof auth !== 'undefined' && auth.logout) await auth.logout();
+            }
+        });
+
+        const searchInput = document.querySelector('header input[type="text"]');
+        searchInput?.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && e.target.value.trim()) {
+                window.location.href = `search.html?q=${encodeURIComponent(e.target.value.trim())}`;
+            }
+        });
+
+        // 加载歌曲信息
+        const songData = JSON.parse(localStorage.getItem('currentSongForComment'));
+        if (songData) {
+            currentSongId = songData.songId;
+            const userAvatar = document.getElementById('userAvatar');
+            if (userAvatar && userInfo) userAvatar.src = userInfo.avatar;
+            updateSongInfo(songData);
+            loadMoreCommentsForSong(songData.songId);
+        } else {
+            alert('未找到歌曲信息');
+            window.location.href = 'home.html';
+        }
+
+        // 节流函数
+        function throttle(func, delay = 200) {
+            let timeout;
+            return function(...args) {
+                if (!timeout) {
+                    timeout = setTimeout(() => {
+                        func.apply(this, args);
+                        timeout = null;
+                    }, delay);
+                }
+            };
+        }
+
+        // 发布评论事件
+        document.getElementById('publishCommentBtn').addEventListener('click', publishComment);
+        const commentTextarea = document.getElementById('commentContent');
+        commentTextarea.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                publishComment();
+            }
+        });
+    });
+
+    // 更新歌曲信息
+    async function updateSongInfo(songData) {
+        const songCoverImg = document.getElementById('songCoverImg');
+        if (songCoverImg) {
+            songCoverImg.src = songData.coverUrl;
+            songCoverImg.alt = `${songData.songName}的封面`;
+        }
+        document.getElementById('songName').textContent = songData.songName;
+        document.getElementById('singersName').textContent = `歌手：${songData.singerName}`;
+        document.getElementById('albumName').textContent = `专辑：${songData.album}`;
+        document.getElementById("favoriteCount").textContent=`${songData.favoriteCount}`;
+
+        const totalCount = await getCommentTotalCount(songData.songId);
+        updateCommentCountDisplay(totalCount);
+    }
+
+    // 更新评论总数显示
+    function updateCommentCountDisplay(totalCount) {
+        const formatNumber = (num) => num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        const songCommentCountElement = document.querySelector('.text-center:nth-child(3) .text-2xl');
+        if (songCommentCountElement) songCommentCountElement.textContent = formatNumber(totalCount);
+    }
+
+    // 获取评论总数
+    async function getCommentTotalCount(songId) {
+        try {
+            const response = await auth.protectedApiRequest({
+                method:'post',
+                url:'/commentServlet?action=getCommentCount',
+                data: { resourceType: 1, resourceId: songId }
+            });
+            return response.data.success ? response.data.totalCount : 0;
+        } catch (error) {
+            console.error('获取评论总数失败:', error);
+            return 0;
+        }
+    }
+
+    // 发布评论
+    async function publishComment() {
+        const content = document.getElementById('commentContent').value.trim();
+        if (!content) return showToast('请输入评论内容');
+        if (!currentSongId) return showToast('未获取到歌曲信息');
+
+        if (!auth || !auth.isAuthenticated()) {
+            showToast('请先登录');
+            return window.location.href = 'login.html';
+        }
+
+        const publishBtn = document.getElementById('publishCommentBtn');
+        publishBtn.disabled = true;
+        publishBtn.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i>发布中...';
+
+        try {
+            const accessToken = auth.getAccessToken();
+            const response = await auth.protectedApiRequest({
+                method: 'post',
+                url: '/commentServlet?action=createComment',
+                data: {
+                    accessToken,
+                    resourceType: 1,
+                    resourceId: currentSongId,
+                    content,
+                    parentId: null,
+                    replyToUserId: null
+                }
+            });
+
+            if (response.data.success) {
+                document.getElementById('commentContent').value = '';
+                resetComments();
+                loadCommentsForSong(currentSongId);
+                updateCommentCountDisplay(await getCommentTotalCount(currentSongId));
+                showToast('评论发布成功',"success");
+            } else {
+                showToast(`发布失败: ${response.data.message || '未知错误'}`,"error");
+            }
+        } catch (error) {
+            showToast(`发布失败: ${error.message || '网络错误'}`,"error");
+        } finally {
+            publishBtn.disabled = false;
+            publishBtn.innerHTML = '发布评论';
+        }
+    }
+
+    // 发布回复
+    async function publishReply(parentId, replyToUserId) {
+        const content = document.getElementById('commentContent').value.trim();
+        if (!content) return showToast('请输入回复内容');
+        if (!currentSongId) return showToast('未获取到歌曲信息');
+
+        try {
+            const accessToken = auth.getAccessToken();
+            const publishBtn = document.getElementById('publishCommentBtn');
+            publishBtn.disabled = true;
+            publishBtn.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i>回复中...';
+
+            const response = await auth.protectedApiRequest({
+                method: 'post',
+                url: '/commentServlet?action=createComment',
+                data: {
+                    accessToken,
+                    resourceType: 1,
+                    resourceId: currentSongId,
+                    content,
+                    parentId,
+                    replyToUserId
+                }
+            });
+
+            if (response.data.success) {
+                document.getElementById('commentContent').value = '';
+                resetComments();
+                loadCommentsForSong(currentSongId);
+                updateCommentCountDisplay(await getCommentTotalCount(currentSongId));
+                showToast('回复成功',"success");
+            } else {
+                showToast(`回复失败: ${response.data.message || '未知错误'}`,"error");
+            }
+        } catch (error) {
+            showToast(`回复失败: ${error.message || '网络错误'}`,"error");
+        } finally {
+            const publishBtn = document.getElementById('publishCommentBtn');
+            publishBtn.disabled = false;
+            publishBtn.innerHTML = '发布评论';
+        }
+    }
+
+    // 滚动加载更多评论
+    function handleScroll() {
+        if (isLoading || !hasMore) return;
+        const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+        const scrollHeight = document.documentElement.scrollHeight || document.body.scrollHeight;
+        const clientHeight = document.documentElement.clientHeight || window.innerHeight;
+        if (scrollTop + clientHeight >= scrollHeight - 200) {
+            loadMoreCommentsForSong(currentSongId);
+        }
+    }
+
+    // 加载更多主评论
+    function loadMoreCommentsForSong(songId) {
+        if (isLoading) return;
+        isLoading = true;
+        loadingIndicator.classList.remove('hidden');
+
+        async function load() {
+            try {
+                const response = await axios.get('/commentServlet?action=getComments', {
+                    params: {
+                        resourceType: 1,
+                        resourceId: songId,
+                        // 主评论分页参数
+                        page: currentPage,
+                        size: pageSize,
+                        // 回复分页参数（默认第一页）
+                        replyPage: 1,
+                        replySize: replySize,
+                        sortByHot: currentSort === "hot"
+                    }
+                });
+
+                if (!response.data.success) {
+                    return console.error('加载更多评论失败:', response.data.message);
+                }
+
+                const pageResult = response.data.comments || {};
+                const newComments = Array.isArray(pageResult.list) ? pageResult.list : [];
+
+                if (newComments.length === 0) {
+                    hasMore = false;
+                    return endIndicator.classList.remove('hidden');
+                }
+
+                newComments.forEach(comment => {
+                    if (comment.parentId === '0') {
+                        const commentElement = createCommentElement(comment);
+                        commentsContainer.appendChild(commentElement);
+                    }
+                });
+
+                const totalPages = Math.ceil((pageResult.total || 0) / pageSize);
+                currentPage++;
+                hasMore = currentPage <= totalPages;
+            } catch (error) {
+                console.error('加载更多评论错误:', error);
+            } finally {
+                isLoading = false;
+                loadingIndicator.classList.add('hidden');
+            }
+        }
+
+        load();
+    }
+
+    // 加载歌曲评论（主评论）
+    function loadCommentsForSong(songId) {
+        async function loadComments() {
+            if (isLoading) return;
+            isLoading = true;
+            loadingIndicator.classList.remove('hidden');
+
+            try {
+                const response = await axios.get('/commentServlet?action=getComments', {
+                    params: {
+                        resourceType: 1,
+                        resourceId: songId,
+                        page: currentPage,       // 主评论页码
+                        size: pageSize,         // 主评论每页条数
+                        replyPage: 1,           // 回复默认加载第1页
+                        replySize: replySize,   // 回复每页固定4条
+                        sortByHot: currentSort === "hot"
+                    }
+                });
+
+                if (!response.data.success) {
+                    return console.error('加载更多评论失败:', response.data.message);
+                }
+
+                const pageResult = response.data.comments || {};
+                const mainComments = Array.isArray(pageResult.list) ? pageResult.list : [];
+
+                if (mainComments.length === 0) {
+                    commentsContainer.innerHTML = '<div class="text-center py-8 text-gray-500">暂无评论，快来抢沙发吧~</div>';
+                    hasMore = false;
+                    endIndicator.classList.remove('hidden');
+                    return;
+                }
+
+                commentsContainer.innerHTML = '';
+                mainComments.forEach(comment => {
+                    if (comment.parentId === '0') {
+                        comment.replyPage = 1; // 初始化回复页码
+                        comment.replyTotal = comment.replyCount || 0;
+                        comment.replyHasMore = comment.replyTotal > replySize;
+                        const commentElement = createCommentElement(comment);
+                        commentsContainer.appendChild(commentElement);
+                    }
+                });
+
+                const totalPages = Math.ceil((pageResult.total || 0) / pageSize);
+                currentPage++;
+                hasMore = currentPage <= totalPages;
+            } catch (error) {
+                commentsContainer.innerHTML = `<div class="text-center py-8 text-red-500">网络错误: ${error.message}</div>`;
+            } finally {
+                isLoading = false;
+                loadingIndicator.classList.add('hidden');
+            }
+        }
+        loadComments();
+    }
+
+    // 创建评论DOM元素
+    function createCommentElement(comment) {
+        if (!comment) return document.createElement('div');
+
+        const div = document.createElement('div');
+        div.className = 'bg-comment rounded-xl p-6 border border-white/50 shadow-sm hover:bg-white/80 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300';
+        div.dataset.commentId = comment.id || '';
+        div.dataset.parentId = comment.parentId || '';
+
+        // 初始化回复分页
+        initReplyPagination(comment);
+
+        // 计算当前页显示的回复
+        const currentReplies = comment.replies ? comment.replies.slice(0, 4) : [];
+
+
+        // 构建回复列表HTML
+        let repliesHtml = '';
+        if (currentReplies.length > 0) {
+            const limitedReplies = currentReplies.slice(0, 4);
+            repliesHtml = currentReplies.map((reply) => `
+                <div class="flex gap-3 pl-4 border-l-2 border-gray-200 mb-4 reply-item" data-reply-id="${reply.id}">
+                    <img src="${escapeHtml(reply.avatar || 'static/images/userAvatars/default.png')}" class="w-10 h-10 rounded-full object-cover">
+                    <div class="flex-1">
+                        <div class="flex flex-wrap gap-1">
+                            <h4 class="font-medium text-gray-800">${escapeHtml(reply.username)}</h4>
+                            <span class="text-gray-500 text-sm">回复</span>
+                            <h4 class="font-medium text-gray-800">@${escapeHtml(reply.replyToUsername || comment.username)}</h4>
+                        </div>
+                        <p class="text-gray-500 text-sm">${formatTime(reply.createTime)}</p>
+                        <div class="bg-comment rounded-xl p-4 border-l-4 border-primary/50 shadow-sm hover:bg-white/80 ml-8 transition-all">
+                            ${escapeHtml(reply.content)}
+                        </div>
+                        <div class="flex items-center gap-6 mt-2 text-gray-600 text-sm">
+                            <button class="like-btn flex items-center transition-all"
+                                    data-comment-id="${reply.id}"
+                                    data-like-count="${reply.likeCount || 0}">
+                                <i class="fa ${reply.userHasLiked ? 'fa-heart liked-heart' : 'fa-heart-o unliked-heart'} mr-1"></i>
+                                <span>${reply.likeCount || 0}</span>
+                            </button>
+                            <button class="reply-to-reply-btn flex items-center hover:text-primary transition-colors"
+                                    data-reply-id="${reply.id}"
+                                    data-parent-id="${comment.id}"
+                                    data-reply-to-user-id="${reply.userId}"
+                                    data-reply-to-username="${escapeHtml(reply.username)}">
+                                <i class="fa fa-reply mr-1"></i> <span>回复</span>
+                            </button>
+                        </div>
+                        <div class="nested-reply-container hidden mt-3 pl-6">
+                            <div class="flex gap-3">
+                                <img src="${escapeHtml(auth.getUserInfo()?.avatar || 'static/images/userAvatars/default.png')}" class="w-8 h-8 rounded-full">
+                                <div class="flex-1">
+                                    <textarea class="nested-reply-textarea w-full bg-white/50 border border-gray-200 rounded-lg p-2 focus:border-primary focus:outline-none text-sm min-h-[50px] resize-none"
+                                              placeholder="回复 @${escapeHtml(reply.username)}..."></textarea>
+                                    <div class="flex justify-end mt-2">
+                                        <button class="submit-nested-reply-btn bg-primary hover:bg-primary/90 text-white rounded-full px-3 py-1 text-xs transition-all"
+                                                data-parent-id="${comment.id}"
+                                                data-reply-id="${reply.id}"
+                                                data-reply-to-user-id="${reply.userId}"
+                                                data-reply-to-username="${escapeHtml(reply.username)}">
+                                            回复
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 回复框HTML
+        const replyBoxHtml = `
+            <div class="flex gap-3 pl-4 mt-4">
+                <img src="${auth.getUserInfo()?.avatar || 'static/images/userAvatars/default.png'}" class="w-10 h-10 rounded-full">
+                <div class="flex-1">
+                    <textarea class="reply-textarea w-full bg-white/50 border border-gray-200 rounded-lg p-3 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all text-sm min-h-[60px] resize-none"
+                              placeholder="回复 @${escapeHtml(comment.username)}..."></textarea>
+                    <div class="flex justify-end mt-2">
+                        <button class="submit-reply-btn bg-primary hover:bg-primary/90 text-white rounded-full px-4 py-1 text-sm transition-all"
+                                data-parent-id="${comment.id}"
+                                data-reply-to-user-id="${comment.userId}"
+                                data-reply-to-username="${escapeHtml(comment.username)}">
+                            回复
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // 计算剩余回复数量（超过4条才显示加载更多）
+        const remainingReplies = Math.max(0, (comment.replyCount || 0) - 4);
+
+        // 回复分页按钮（只在有超过4条回复时显示）
+        const replyPaginationHtml = `
+            <div class="reply-pagination mt-4 flex justify-center">
+                ${comment.replyTotal > 4 ? `
+                    <button class="load-more-replies-btn bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full px-4 py-1 text-sm transition-all flex items-center"
+                            data-comment-id="${comment.id}"
+                            data-current-page="1"
+                            data-total-replies="${comment.replyTotal}">
+                        <i class="fa fa-angle-down mr-1"></i>
+                        <span>加载更多回复（还剩 ${comment.replyTotal - 4} 条）</span>
+                    </button>
+                ` : ''}
+            </div>
+        `;
+
+        // 回复区域HTML（默认展开，不提供收起功能）
+            const replySection = `
+        <div class="mt-6 space-y-4 reply-section hidden">
+            <div class="replies-list">${repliesHtml}</div>
+            ${replyPaginationHtml}
+            ${replyBoxHtml}
+        </div>
+    `;
+
+        // 主评论HTML结构
+        div.innerHTML = `
+            <div class="flex gap-4">
+                <img src="${escapeHtml(comment.avatar || 'static/images/userAvatars/default.png')}" class="w-12 h-12 rounded-full">
+                <div class="flex-1">
+                    <div class="flex justify-between">
+                        <div>
+                            <h3 class="font-medium text-gray-800">${escapeHtml(comment.username)}</h3>
+                            <p class="text-gray-500 text-sm">${formatTime(comment.createTime)}</p>
+                        </div>
+                        <button class="text-gray-500 hover:text-gray-700 transition-colors">
+                            <i class="fa fa-ellipsis-h"></i>
+                        </button>
+                    </div>
+                    <div class="bg-comment rounded-xl p-4 border-l-4 border-primary/50 shadow-sm hover:bg-white/80 ml-8 transition-all mt-2">
+                        ${escapeHtml(comment.content)}
+                    </div>
+                    <div class="flex items-center gap-6 mt-4 text-gray-600">
+                        <button class="like-btn flex items-center transition-all"
+                                data-comment-id="${comment.id}"
+                                data-like-count="${comment.likeCount}">
+                            <i class="fa ${comment.userHasLiked ? 'fa-heart liked-heart' : 'fa-heart-o unliked-heart'} mr-1"></i>
+                            <span>${comment.likeCount || 0}</span>
+                        </button>
+                        <button class="toggle-reply-btn flex items-center hover:text-primary transition-colors">
+                            <i class="fa fa-comment-o mr-1"></i> <span>回复 (${comment.replyCount || 0})</span>
+                        </button>
+                        <button class="flex items-center hover:text-accent2 transition-colors">
+                            <i class="fa fa-star-o mr-1"></i> <span>分享</span>
+                        </button>
+                    </div>
+                    ${replySection}
+                </div>
+            </div>
+        `;
+
+
+        // 绑定回复按钮点击事件
+        const toggleReplyBtn = div.querySelector('.toggle-reply-btn');
+        toggleReplyBtn?.addEventListener('click', function() {
+            const replySection = div.querySelector('.reply-section');
+            replySection.classList.toggle('hidden');
+            // 首次显示时，确保只显示最多4条回复
+            if (!replySection.classList.contains('hidden')) {
+                const allReplies = replySection.querySelectorAll('.reply-item');
+                allReplies.forEach((reply, index) => {
+                    // 只显示前4条回复
+                    reply.classList.toggle('hidden', index >= 4);
+                });
+                // 总回复数 > 4 时显示，否则隐藏
+                const loadMoreBtn = replySection.querySelector('.load-more-replies-btn');
+                if (loadMoreBtn) {
+                    if (comment.replyTotal > 4) {
+                        loadMoreBtn.classList.remove('hidden');
+                    } else {
+                        loadMoreBtn.classList.add('hidden');
+                    }
+                }
+            }
+        });
+        // 绑定点赞事件
+        const likeBtn = div.querySelector('.like-btn');
+        likeBtn?.addEventListener('click', function() {
+            const commentId = this.dataset.commentId;
+            const currentLikeCount = parseInt(this.dataset.likeCount);
+            handleLikeButtonClick(this, commentId, currentLikeCount);
+        });
+
+        // 绑定回复提交事件
+        div.querySelector('.submit-reply-btn')?.addEventListener('click', function() {
+            const textarea = div.querySelector('.reply-textarea');
+            const content = textarea.value.trim();
+            if (!content) return showToast('请输入回复内容');
+            publishReplyToComment(comment.id, this.dataset.replyToUserId, content, div);
+            textarea.value = '';
+        });
+
+        // 绑定嵌套回复按钮事件
+        const replyToReplyBtns = div.querySelectorAll('.reply-to-reply-btn');
+        replyToReplyBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                div.querySelectorAll('.nested-reply-container').forEach(container => {
+                    container.classList.add('hidden');
+                });
+                const replyId = this.dataset.replyId;
+                const nestedReplyContainer = div.querySelector(`[data-reply-id="${replyId}"]`).closest('.reply-item').querySelector('.nested-reply-container');
+                nestedReplyContainer.classList.toggle('hidden');
+                if (!nestedReplyContainer.classList.contains('hidden')) {
+                    nestedReplyContainer.querySelector('.nested-reply-textarea').focus();
+                }
+            });
+        });
+
+        // 绑定嵌套回复提交事件
+        const submitNestedReplyBtns = div.querySelectorAll('.submit-nested-reply-btn');
+        submitNestedReplyBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const textarea = this.closest('.nested-reply-container').querySelector('.nested-reply-textarea');
+                const content = textarea.value.trim();
+                if (!content) return showToast('请输入回复内容');
+                publishNestedReply(
+                    this.dataset.parentId,
+                    this.dataset.replyId,
+                    this.dataset.replyToUserId,
+                    content,
+                    div,
+                    this.closest('.reply-item')
+                );
+                textarea.value = '';
+                this.closest('.nested-reply-container').classList.add('hidden');
+            });
+        });
+
+        // 绑定回复点赞事件
+        const replyLikeBtns = div.querySelectorAll('.reply-item .like-btn');
+        replyLikeBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const commentId = this.dataset.commentId;
+                const currentLikeCount = parseInt(this.dataset.likeCount);
+                handleLikeButtonClick(this, commentId, currentLikeCount);
+            });
+        });
+
+        // 绑定加载更多回复按钮事件（只保留加载更多，删除收起功能）
+        const loadMoreBtn = div.querySelector('.load-more-replies-btn');
+        if (loadMoreBtn) {
+            loadMoreBtn.addEventListener('click', async function() {
+                const commentId = this.dataset.commentId;
+                const currentPage = parseInt(this.dataset.currentPage);
+                const totalReplies = parseInt(this.dataset.totalReplies);
+                const nextPage = currentPage + 1;
+
+                // 显示加载中状态
+                this.disabled = true;
+                this.innerHTML = '<i class="fa fa-spinner fa-spin mr-1"></i> 加载中...';
+
+                try {
+                    // 加载更多回复
+                    const response = await auth.protectedApiRequest({
+                        method: 'post',
+                        url: '/commentServlet?action=getComments',
+                        params: {
+                            resourceType: 1,
+                            resourceId: currentSongId,
+                            parentId: commentId, // 主评论ID
+                            page: currentPage,
+                            size: pageSize,
+                            replyPage: nextPage,    // 下一页
+                            replySize: replySize, // 固定每页4条
+                            sortByHot: true    // 回复按时间排序
+                        }
+                    });
+
+                    if (!response.data.success) {
+                        this.innerHTML = '<i class="fa fa-exclamation-circle mr-1"></i> 加载失败';
+                        return;
+                    }
+
+                    // 处理返回的回复列表
+                    const newReplies = response.data.comments?.list || [];
+                    if (!Array.isArray(newReplies)) {
+                        this.innerHTML = '<i class="fa fa-exclamation-circle mr-1"></i> 数据格式错误';
+                        return;
+                    }
+                    const filteredReplies = newReplies.filter(reply =>
+                        reply.parentId === commentId
+                    );
+
+                    // 添加新回复到DOM
+                    filteredReplies.forEach(reply => {
+                        const replyHtml = `
+                    <div class="flex gap-3 pl-4 border-l-2 border-gray-200 mb-4 reply-item animate-fadeIn" data-reply-id="${reply.id}">
+                        <img src="${escapeHtml(reply.avatar || 'static/images/userAvatars/default.png')}" class="w-10 h-10 rounded-full">
+                        <div class="flex-1">
+                            <div class="flex flex-wrap gap-1">
+                                <h4 class="font-medium text-gray-800">${escapeHtml(reply.username)}</h4>
+                                <span class="text-gray-500 text-sm">回复</span>
+                                <h4 class="font-medium text-gray-800">@${escapeHtml(reply.replyToUsername || comment.username)}</h4>
+                            </div>
+                            <p class="text-gray-500 text-sm">${formatTime(reply.createTime)}</p>
+                            <div class="bg-comment rounded-xl p-4 border-l-4 border-primary/50 ml-8 mt-2">
+                                ${escapeHtml(reply.content)}
+                            </div>
+                            <div class="flex items-center gap-6 mt-2 text-gray-600 text-sm">
+                                <button class="like-btn flex items-center transition-all"
+                                        data-comment-id="${reply.id}"
+                                        data-like-count="${reply.likeCount || 0}">
+                                    <i class="fa ${reply.userHasLiked ? 'fa-heart liked-heart' : 'fa-heart-o unliked-heart'} mr-1"></i>
+                                    <span>${reply.likeCount || 0}</span>
+                                </button>
+                                <button class="reply-to-reply-btn flex items-center hover:text-primary">
+                                    <i class="fa fa-reply mr-1"></i> <span>回复</span>
+                                </button>
+                            </div>
+                            <div class="nested-reply-container hidden mt-3 pl-6">
+                                <div class="flex gap-3">
+                                    <img src="${escapeHtml(auth.getUserInfo()?.avatar || 'static/images/userAvatars/default.png')}" class="w-8 h-8 rounded-full">
+                                    <div class="flex-1">
+                                        <textarea class="nested-reply-textarea w-full bg-white/50 border border-gray-200 rounded-lg p-2 focus:border-primary focus:outline-none text-sm min-h-[50px] resize-none"
+                                                  placeholder="回复 @${escapeHtml(reply.username)}..."></textarea>
+                                        <div class="flex justify-end mt-2">
+                                            <button class="submit-nested-reply-btn bg-primary hover:bg-primary/90 text-white rounded-full px-3 py-1 text-xs transition-all">
+                                                回复
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+
+                        // 插入到分页按钮前
+                        const paginationContainer = div.querySelector('.reply-pagination');
+                        if (paginationContainer) {
+                            paginationContainer.insertAdjacentHTML('beforebegin', replyHtml);
+                        } else {
+                            const repliesContainer = div.querySelector('.replies-list');
+                            if (repliesContainer) {
+                                repliesContainer.insertAdjacentHTML('beforeend', replyHtml);
+                            }
+                        }
+
+                        // 绑定新回复的点赞事件
+                        const newLikeBtn = div.querySelector(`[data-reply-id="${reply.id}"] .like-btn`);
+                        if (newLikeBtn) {
+                            newLikeBtn.addEventListener('click', function() {
+                                const rid = this.dataset.commentId;
+                                const count = parseInt(this.dataset.likeCount);
+                                handleLikeButtonClick(this, rid, count);
+                            });
+                        }
+                    });
+
+                    // 更新按钮状态
+                    this.dataset.currentPage = nextPage;
+                    const totalPages = Math.ceil(totalReplies / replySize);
+                    const remaining = totalReplies - (nextPage * replySize);
+
+                    // 检查是否已加载全部回复
+                    if (nextPage >= totalPages || filteredReplies.length < replySize) {
+                        // 已加载全部回复，隐藏加载更多按钮
+                        this.remove();
+                    } else {
+                        // 还有更多回复
+                        this.innerHTML = `<i class="fa fa-angle-down mr-1"></i>
+                            <span>加载更多回复（还剩 ${remaining > 0 ? remaining : 0} 条）</span>`;
+                    }
+
+                } catch (error) {
+                    console.error('加载更多回复失败:', error);
+                    this.innerHTML = '<i class="fa fa-exclamation-circle mr-1"></i> 加载失败，点击重试';
+                } finally {
+                    this.disabled = false;
+                }
+            });
+        }
+
+        return div;
+    }
+
+    // 发布回复到主评论
+    async function publishReplyToComment(parentId, replyToUserId, content, commentElement) {
+        try {
+            const accessToken = auth.getAccessToken();
+            const response = await auth.protectedApiRequest({
+                method: 'post',
+                url: '/commentServlet?action=createComment',
+                data: {
+                    accessToken,
+                    resourceType: 1,
+                    resourceId: currentSongId,
+                    content,
+                    parentId,
+                    replyToUserId
+                }
+            });
+
+            if (response.data.success) {
+                const comment = response.data.comment;
+                const newReply = {
+                    id: comment.id,
+                    userId: comment.userId,
+                    username: comment.username,
+                    avatar: comment.avatar,
+                    content,
+                    replyToUserId,
+                    replyToUsername: commentElement.querySelector('h3').textContent,
+                    createTime: comment.createTime,
+                    likeCount: 0
+                };
+
+                const nestedReplyHtml = `
+                    <div class="flex gap-3 pl-4 border-l-2 border-gray-200 mb-4 animate-fadeIn reply-item" data-reply-id="${newReply.id}">
+                        <img src="${escapeHtml(newReply.avatar)}" class="w-10 h-10 rounded-full">
+                        <div class="flex-1">
+                            <div class="flex flex-wrap gap-1">
+                                <h4 class="font-medium">${escapeHtml(newReply.username)}</h4>
+                                <span class="text-gray-500 text-sm">回复</span>
+                                <h4 class="font-medium">@${escapeHtml(newReply.replyToUsername)}</h4>
+                            </div>
+                            <p class="text-gray-500 text-sm">${formatTime(newReply.createTime)}</p>
+                            <div class="bg-comment rounded-xl p-4 border-l-4 border-primary/50 ml-8 mt-2">
+                                ${escapeHtml(newReply.content)}
+                            </div>
+                            <div class="flex items-center gap-6 mt-2 text-gray-600 text-sm">
+                                <button class="like-btn flex items-center transition-all"
+                                        data-comment-id="${newReply.id}"
+                                        data-like-count="0">
+                                    <i class="fa fa-heart-o unliked-heart mr-1"></i>
+                                    <span>0</span>
+                                </button>
+                                <button class="reply-to-reply-btn flex items-center hover:text-primary">
+                                    <i class="fa fa-reply mr-1"></i> <span>回复</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>`;
+
+                // 插入新回复
+                const repliesList = commentElement.querySelector('.replies-list');
+                if (repliesList) {
+                    repliesList.insertAdjacentHTML('afterbegin', nestedReplyHtml);
+                }
+
+                // 绑定新回复的点赞事件
+                const newLikeBtn = commentElement.querySelector(`[data-reply-id="${newReply.id}"] .like-btn`);
+                if (newLikeBtn) {
+                    newLikeBtn.addEventListener('click', function() {
+                        const rid = this.dataset.commentId;
+                        const count = parseInt(this.dataset.likeCount);
+                        handleLikeButtonClick(this, rid, count);
+                    });
+                }
+
+                // 更新回复数
+                const replyCountEl = commentElement.querySelector('.toggle-reply-btn span');
+                const currentCount = parseInt(replyCountEl.textContent.match(/\d+/)[0]);
+                replyCountEl.textContent = `回复 (${currentCount + 1})`;
+
+                // 更新分页按钮
+                const loadMoreBtn = commentElement.querySelector('.load-more-replies-btn');
+                if (loadMoreBtn) {
+                    const totalReplies = parseInt(loadMoreBtn.dataset.totalReplies) + 1;
+                    loadMoreBtn.dataset.totalReplies = totalReplies;
+                    loadMoreBtn.innerHTML = `<i class="fa fa-angle-down mr-1"></i>
+                        <span>加载更多回复（还剩 ${totalReplies - replySize} 条）</span>`;
+                }
+
+                showToast('回复成功');
+            } else {
+                showToast(`回复失败: ${response.data.message}`);
+            }
+        } catch (error) {
+            console.error('发布回复失败:', error);
+            showToast('网络错误，回复失败');
+        }
+    }
+
+    // 发布嵌套回复
+    async function publishNestedReply(parentCommentId, replyId, replyToUserId, content, commentElement, replyElement) {
+        try {
+            const accessToken = auth.getAccessToken();
+            const response = await auth.protectedApiRequest({
+                method: 'post',
+                url: '/commentServlet?action=createComment',
+                data: {
+                    accessToken,
+                    resourceType: 1,
+                    resourceId: currentSongId,
+                    content,
+                    parentId: parentCommentId,
+                    replyToUserId
+                }
+            });
+
+            if (response.data.success) {
+                const comment = response.data.comment;
+                const newNestedReply = {
+                    id: comment.id,
+                    userId: comment.userId,
+                    username: comment.username,
+                    avatar: comment.avatar,
+                    content,
+                    replyToUserId,
+                    replyToUsername: replyElement.querySelector('.font-medium').textContent,
+                    createTime: comment.createTime,
+                    likeCount: 0
+                };
+
+                const nestedReplyHtml = `
+                    <div class="flex gap-3 pl-4 border-l-2 border-gray-200 mb-4 animate-fadeIn reply-item" data-reply-id="${newNestedReply.id}">
+                        <img src="${escapeHtml(newNestedReply.avatar)}" class="w-10 h-10 rounded-full">
+                        <div class="flex-1">
+                            <div class="flex flex-wrap gap-1">
+                                <h4 class="font-medium">${escapeHtml(newNestedReply.username)}</h4>
+                                <span class="text-gray-500 text-sm">回复</span>
+                                <h4 class="font-medium">@${escapeHtml(newNestedReply.replyToUsername)}</h4>
+                            </div>
+                            <p class="text-gray-500 text-sm">${formatTime(newNestedReply.createTime)}</p>
+                            <div class="bg-comment rounded-xl p-4 border-l-4 border-primary/50 ml-8 mt-2">
+                                ${escapeHtml(newNestedReply.content)}
+                            </div>
+                            <div class="flex items-center gap-6 mt-2 text-gray-600 text-sm">
+                                <button class="like-btn flex items-center transition-all"
+                                        data-comment-id="${newNestedReply.id}"
+                                        data-like-count="0">
+                                    <i class="fa fa-heart-o unliked-heart mr-1"></i>
+                                    <span>0</span>
+                                </button>
+                                <button class="reply-to-reply-btn flex items-center hover:text-primary">
+                                    <i class="fa fa-reply mr-1"></i> <span>回复</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>`;
+
+                // 插入新嵌套回复
+                const repliesList = commentElement.querySelector('.replies-list');
+                if (repliesList) {
+                    repliesList.insertAdjacentHTML('afterbegin', nestedReplyHtml);
+                }
+
+                // 绑定新回复的点赞事件
+                const newLikeBtn = commentElement.querySelector(`[data-reply-id="${newNestedReply.id}"] .like-btn`);
+                if (newLikeBtn) {
+                    newLikeBtn.addEventListener('click', function() {
+                        const rid = this.dataset.commentId;
+                        const count = parseInt(this.dataset.likeCount);
+                        handleLikeButtonClick(this, rid, count);
+                    });
+                }
+
+                // 更新回复数
+                const replyCountEl = commentElement.querySelector('.toggle-reply-btn span');
+                const currentCount = parseInt(replyCountEl.textContent.match(/\d+/)[0]);
+                replyCountEl.textContent = `回复 (${currentCount + 1})`;
+
+                // 更新分页按钮
+                const loadMoreBtn = commentElement.querySelector('.load-more-replies-btn');
+                if (loadMoreBtn) {
+                    const totalReplies = parseInt(loadMoreBtn.dataset.totalReplies) + 1;
+                    loadMoreBtn.dataset.totalReplies = totalReplies;
+                    loadMoreBtn.innerHTML = `<i class="fa fa-angle-down mr-1"></i>
+                        <span>加载更多回复（还剩 ${totalReplies - replySize} 条）</span>`;
+                }
+
+                showToast('回复成功');
+            } else {
+                showToast(`回复失败: ${response.data.message}`);
+            }
+        } catch (error) {
+            console.error('发布嵌套回复失败:', error);
+            showToast('网络错误，回复失败');
+        }
+    }
+
+    // 重置评论列表
+    function resetComments() {
+        commentsContainer.innerHTML = '';
+        currentPage = 1;
+        hasMore = true;
+        endIndicator.classList.add('hidden');
+    }
+
+    // 点赞/取消点赞
+    async function toggleCommentLike(commentId, isLiked) {
+        try {
+            if (!auth || !auth.isAuthenticated()) {
+                showToast('请先登录');
+                window.location.href = 'login.html';
+                return { success: false };
+            }
+
+            const accessToken = auth.getAccessToken();
+            const response = await auth.protectedApiRequest({
+                method: 'post',
+                url: '/commentServlet?action=likeComment',
+                data: { commentId, like: !isLiked }
+            });
+
+            return response.data;
+        } catch (error) {
+            console.error('点赞操作失败:', error);
+            showToast('网络错误，操作失败', 'error');
+            return { success: false };
+        }
+    }
+
+    // 处理点赞按钮点击
+    function handleLikeButtonClick(button, commentId, currentLikeCount) {
+        const safeLikeCount = isNaN(currentLikeCount) ? 0 : currentLikeCount;
+        const isLiked = button.querySelector('i').classList.contains('fa-heart');
+        button.disabled = true;
+        button.innerHTML = '<i class="fa fa-spinner fa-spin mr-1"></i> 处理中...';
+
+        toggleCommentLike(commentId, isLiked).then(result => {
+            if (result.success) {
+                const newLikeCount = isLiked ? safeLikeCount - 1 : safeLikeCount + 1;
+                const [iconClass, styleClass] = isLiked
+                    ? ['fa-heart-o', 'unliked-heart']
+                    : ['fa-heart', 'liked-heart'];
+
+                button.innerHTML = `<i class="fa ${iconClass} mr-1 ${styleClass}"></i> <span>${newLikeCount}</span>`;
+                button.dataset.likeCount = newLikeCount;
+                showToast(isLiked ? '取消点赞成功' : '点赞成功', isLiked ? 'info' : 'success');
+            } else {
+                const [iconClass, styleClass] = isLiked
+                    ? ['fa-heart', 'liked-heart']
+                    : ['fa-heart-o', 'unliked-heart'];
+
+                button.innerHTML = `<i class="fa ${iconClass} mr-1 ${styleClass}"></i> <span>${currentLikeCount}</span>`;
+                showToast(result.message || '操作失败', 'error');
+            }
+            button.disabled = false;
+        });
+    }
+
+    // 格式化时间
+    function formatTime(timestamp) {
+        if (!timestamp) return '未知时间';
+
+        let date;
+        if (typeof timestamp === 'string') {
+            date = timestamp.includes(' ')
+                ? new Date(timestamp.replace(' ', 'T') + 'Z')
+                : new Date(timestamp + 'T00:00:00Z');
+        } else {
+            date = new Date(timestamp);
+        }
+
+        if (isNaN(date.getTime())) return '无效时间';
+
+        const now = new Date();
+        const utcNow = new Date(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+        const today = new Date(utcNow);
+        const yesterday = new Date(today);
+        yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+
+        const isToday = date >= today;
+        const isYesterday = date >= yesterday && date < today;
+        const isThisYear = date.getUTCFullYear() === now.getUTCFullYear();
+
+        const pad = (num) => num.toString().padStart(2, '0');
+        const hours = pad(date.getUTCHours());
+        const minutes = pad(date.getUTCMinutes());
+        const timeStr = `${hours}:${minutes}`;
+
+        if (isToday) return timeStr;
+        if (isYesterday) return `昨天 ${timeStr}`;
+        if (isThisYear) return `${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
+        return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
+    }
+
+    // 显示提示消息
+    function showToast(message, type = 'info') {
+        const existingToast = document.querySelector('.toast-notification');
+        if (existingToast) existingToast.remove();
+
+        const toast = document.createElement('div');
+        toast.className = `toast-notification fixed top-20 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg shadow-lg z-50 transition-all duration-300 ${
+            type === 'success' ? 'bg-green-500 text-white' :
+                type === 'error' ? 'bg-red-500 text-white' : 'bg-gray-800 text-white'
+        }`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+            toast.classList.add('opacity-0');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+    // 表情包数据 - 分类存储常用表情
+    const emojis = {
+        all: [
+            '😀', '😁', '😂', '🤣', '😃', '😄', '😅', '😆',
+            '😉', '😊', '🙂', '🙃', '😋', '😎', '😍', '😘',
+            '🥰', '😗', '😙', '👍', '👎', '❤️', '💔', '🎉',
+            '🎊', '👏', '🙌', '👋', '👀', '💯', '🔥', '🤔',
+            '🙏', '🎉', '🎁', '🎶', '🎵', '👍', '👎', '👌',
+            '👐', '🙌', '👏', '💪', '👈', '👉', '🙏', '💖'
+        ],
+        people: [
+            '😀', '😁', '😂', '🤣', '😃', '😄', '😅', '😆',
+            '😉', '😊', '🙂', '🙃', '😋', '😎', '😍', '😘',
+            '🥰', '😗', '😙', '🤔', '🤭', '🤫', '🤔', '🤐'
+        ],
+        nature: [
+            '☀️', '🌤️', '⛅', '🌥️', '☁️', '🌧️', '⛈️', '🌨️',
+            '❄️', '🌬️', '🌪️', '🌈', '🌙', '🌟', '✨', '⭐',
+            '🌎', '🌍', '🌏', '🌱', '🌿', '☘️', '🍀', '🌸'
+        ],
+        objects: [
+            '❤️', '💔', '🎉', '🎊', '👏', '🙌', '👋', '👀',
+            '💯', '🔥', '💡', '💸', '📈', '📉', '🎁', '🎈',
+            '🎂', '📷', '🎵', '🎶', '🎧', '📱', '💻', '⌚'
+        ]
+    };
+    // DOM元素
+    const emojiButton = document.getElementById('emojiButton');
+    const emojiPicker = document.getElementById('emojiPicker');
+    const emojiGrid = document.getElementById('emojiGrid');
+    const commentContent = document.getElementById('commentContent');
+    const emojiCategories = document.querySelectorAll('.emoji-category');
+    // 初始化表情包面板
+    function initEmojiPicker() {
+        renderEmojis('all'); // 默认显示全部表情
+
+        // 绑定分类切换事件
+        emojiCategories.forEach(category => {
+            category.addEventListener('click', () => {
+                // 更新活跃状态
+                emojiCategories.forEach(c => c.classList.remove('active'));
+                category.classList.add('active');
+
+                // 渲染选中分类的表情
+                const categoryName = category.dataset.category;
+                renderEmojis(categoryName);
+            });
+        });
+    }
+    // 渲染指定分类的表情包
+    function renderEmojis(category) {
+        emojiGrid.innerHTML = ''; // 清空现有表情
+
+        const emojiList = emojis[category] || emojis.all;
+
+        emojiList.forEach(emoji => {
+            const emojiElement = document.createElement('div');
+            emojiElement.className = 'emoji-item';
+            emojiElement.textContent = emoji;
+            emojiElement.title = emoji;
+
+            // 点击表情插入到评论框
+            emojiElement.addEventListener('click', () => {
+                insertEmoji(emoji);
+            });
+
+            emojiGrid.appendChild(emojiElement);
+        });
+    }
+    // 将表情插入到评论框的光标位置
+    function insertEmoji(emoji) {
+        const textarea = commentContent;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const value = textarea.value;
+
+        // 在光标位置插入表情
+        textarea.value = value.substring(0, start) + emoji + value.substring(end);
+
+        // 重新设置光标位置到表情后面
+        const cursorPos = start + emoji.length;
+        textarea.selectionStart = cursorPos;
+        textarea.selectionEnd = cursorPos;
+
+        // 聚焦评论框
+        textarea.focus();
+    }
+    // 切换表情包面板显示/隐藏
+    function toggleEmojiPicker() {
+        if (emojiPicker.style.display === 'block') {
+            emojiPicker.style.display = 'none';
+        } else {
+            // 计算面板位置（在评论框下方）
+            const textareaRect = commentContent.getBoundingClientRect();
+            const containerRect = commentContent.parentElement.getBoundingClientRect();
+
+            emojiPicker.style.top = (textareaRect.bottom - containerRect.top + 10) + 'px';
+            emojiPicker.style.left = '0';
+            emojiPicker.style.display = 'block';
+        }
+    }
+    // 点击页面其他地方关闭表情包面板
+    document.addEventListener('click', (e) => {
+        if (!emojiPicker.contains(e.target) && e.target !== emojiButton && !emojiButton.contains(e.target)) {
+            emojiPicker.style.display = 'none';
+        }
+    });
+    // 初始化表情包功能
+    document.addEventListener('DOMContentLoaded', () => {
+        // 绑定表情包按钮点击事件
+        emojiButton.addEventListener('click', (e) => {
+            e.stopPropagation(); // 防止事件冒泡导致面板立即关闭
+            toggleEmojiPicker();
+        });
+
+        initEmojiPicker();
+    });
+</script>
+</body>
+</html>

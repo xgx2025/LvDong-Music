@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QQ登录界面</title>
+    <!-- 引入外部资源 -->
+    <script src="static/js/config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="static/js/axios-config.js"></script>
+    <script src="static/js/auth.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+
+    <!-- 配置基础路径 -->
+    <script>
+        const base = document.createElement('base');
+        base.href = `http://${SERVER_IP}/xgxmusic/`;
+        document.head.appendChild(base);
+    </script>
+
+    <!-- 配置Tailwind自定义颜色 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        qqblue: '#12B7F5',
+                        qqlightblue: '#E8F3FB',
+                        qqgray: '#8C8C8C',
+                        qqdarkgray: '#666666',
+                        qqborder: '#DDDDDD',
+                    },
+                    fontFamily: {
+                        qq: ['"Microsoft YaHei"', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .qq-shadow {
+                box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+            }
+            .qq-transition {
+                transition: all 0.3s ease;
+            }
+            .qq-gradient {
+                background: linear-gradient(120deg, #12c2e9, #c471ed, #f64f59);
+            }
+            .toast-success {
+                background-color: #4CAF50;
+            }
+            .toast-error {
+                background-color: #F44336;
+            }
+        }
+    </style>
+</head>
+<body class="qq-gradient min-h-screen flex justify-center items-center font-qq p-4">
+<!-- 提示框容器 -->
+<div id="toast" class="fixed top-4 right-4 px-4 py-3 rounded-md text-white shadow-lg transform translate-x-full transition-transform duration-300 z-50"></div>
+
+<div class="login-container bg-white rounded-lg qq-shadow w-full max-w-md overflow-hidden transform hover:scale-[1.01] qq-transition">
+    <!-- 登录头部 -->
+    <div class="login-header bg-qqblue text-white p-4 flex justify-between items-center">
+        <span class="text-lg font-medium">QQ登录</span>
+        <span class="close-btn text-xl cursor-pointer hover:text-gray-200 qq-transition">×</span>
+    </div>
+
+    <!-- 登录切换标签 -->
+    <div class="login-tabs flex border-b border-qqborder">
+        <div class="tab-item w-1/2 text-center py-3 font-medium cursor-pointer text-qqblue border-b-2 border-qqblue" data-tab="account">
+            账号密码登录
+        </div>
+        <div class="tab-item w-1/2 text-center py-3 font-medium cursor-pointer text-qqgray hover:text-qqblue qq-transition" data-tab="qrcode">
+            扫码登录
+        </div>
+    </div>
+
+    <!-- 账号密码登录内容 -->
+    <div class="login-content p-6" id="account-login">
+        <form id="loginForm" class="space-y-6">
+            <div class="avatar-container text-center mb-6">
+                <img src="static/images/QQ.webp" alt="QQ头像" class="avatar w-20 h-20 rounded-full border-2 border-gray-100 mx-auto hover:scale-105 qq-transition">
+            </div>
+
+            <div class="input-group mb-4 relative">
+                <div class="absolute left-3 top-1/2 transform -translate-y-1/2 text-qqgray">
+                    <i class="fa fa-user"></i>
+                </div>
+                <input type="text" id="username" name="username" placeholder="QQ号码/手机/邮箱" class="w-full pl-10 pr-3 py-3 border border-qqborder rounded-md outline-none focus:border-qqblue focus:ring-1 focus:ring-qqblue qq-transition" required>
+            </div>
+
+            <div class="input-group mb-4 relative">
+                <div class="absolute left-3 top-1/2 transform -translate-y-1/2 text-qqgray">
+                    <i class="fa fa-lock"></i>
+                </div>
+                <input type="password" id="password" name="password" placeholder="密码" class="w-full pl-10 pr-10 py-3 border border-qqborder rounded-md outline-none focus:border-qqblue focus:ring-1 focus:ring-qqblue qq-transition" required>
+                <span class="password-toggle absolute right-3 top-1/2 transform -translate-y-1/2 text-qqgray cursor-pointer hover:text-qqblue qq-transition">
+                    <i class="fa fa-eye-slash"></i>
+                </span>
+            </div>
+
+            <div class="status-container mb-6 flex justify-between items-center">
+                <div class="remember-me flex items-center text-sm text-qqdarkgray">
+                    <input type="checkbox" id="remember" name="remember" class="mr-2 accent-qqblue">
+                    <label for="remember">记住密码</label>
+                </div>
+
+                <div class="status-selector relative">
+                    <span class="text-sm text-qqblue cursor-pointer flex items-center">
+                        在线
+                        <i class="fa fa-caret-down ml-1"></i>
+                    </span>
+                    <div class="status-options absolute right-0 mt-2 bg-white border border-qqborder rounded-md shadow-lg w-32 hidden z-10">
+                        <div class="status-option px-3 py-2 hover:bg-qqlightblue text-sm cursor-pointer">在线</div>
+                        <div class="status-option px-3 py-2 hover:bg-qqlightblue text-sm cursor-pointer">忙碌</div>
+                        <div class="status-option px-3 py-2 hover:bg-qqlightblue text-sm cursor-pointer">离开</div>
+                        <div class="status-option px-3 py-2 hover:bg-qqlightblue text-sm cursor-pointer">隐身</div>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="login-btn w-full py-3 bg-qqblue text-white rounded-md text-base font-medium cursor-pointer hover:bg-[#0E9DDB] qq-transition mb-4">
+                登录
+            </button>
+
+            <div class="footer-links flex justify-between text-xs text-qqdarkgray mb-6">
+                <a href="#" class="hover:text-qqblue qq-transition">找回密码</a>
+                <a href="#" class="hover:text-qqblue qq-transition">注册账号</a>
+                <a href="#" class="hover:text-qqblue qq-transition">问题反馈</a>
+            </div>
+
+            <!-- 其他登录方式 -->
+            <div class="other-login">
+                <div class="flex items-center justify-center mb-4">
+                    <div class="h-px bg-gray-200 flex-1"></div>
+                    <span class="px-3 text-xs text-qqgray">其他登录方式</span>
+                    <div class="h-px bg-gray-200 flex-1"></div>
+                </div>
+
+                <div class="flex justify-center space-x-6">
+                    <a href="#" class="text-gray-500 hover:text-qqblue qq-transition" title="微信登录">
+                        <i class="fa fa-weixin text-xl"></i>
+                    </a>
+                    <a href="#" class="text-gray-500 hover:text-qqblue qq-transition" title="手机号登录">
+                        <i class="fa fa-mobile text-2xl"></i>
+                    </a>
+                    <a href="#" class="text-gray-500 hover:text-qqblue qq-transition" title="企业微信登录">
+                        <i class="fa fa-building text-xl"></i>
+                    </a>
+                </div>
+            </div>
+            <input type="hidden" name="action" value="login">
+        </form>
+    </div>
+
+    <!-- 扫码登录内容 -->
+    <div class="login-content p-6 hidden" id="qrcode-login">
+        <div class="text-center mb-6">
+            <div class="bg-white border-4 border-gray-100 rounded-md inline-block p-3 shadow-sm">
+                <img src="https://picsum.photos/200/200" alt="QQ登录二维码" class="w-48 h-48">
+            </div>
+            <p class="mt-4 text-sm text-qqdarkgray">请使用QQ手机版扫描二维码登录</p>
+            <p class="text-xs text-red-500 mt-2 hidden" id="qrcode-expired">二维码已过期，请点击刷新</p>
+        </div>
+
+        <div class="flex justify-center mb-6">
+            <button class="refresh-qrcode flex items-center text-sm text-qqblue hover:text-[#0E9DDB] cursor-pointer qq-transition">
+                <i class="fa fa-refresh mr-1"></i>
+                刷新二维码
+            </button>
+        </div>
+
+        <div class="other-login">
+            <div class="flex items-center justify-center mb-4">
+                <div class="h-px bg-gray-200 flex-1"></div>
+                <span class="px-3 text-xs text-qqgray">其他登录方式</span>
+                <div class="h-px bg-gray-200 flex-1"></div>
+            </div>
+
+            <div class="flex justify-center space-x-6">
+                <a href="#" class="text-gray-500 hover:text-qqblue qq-transition" title="微信登录">
+                    <i class="fa fa-weixin text-xl"></i>
+                </a>
+                <a href="#" class="text-gray-500 hover:text-qqblue qq-transition" title="手机号登录">
+                    <i class="fa fa-mobile text-2xl"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部版权信息 -->
+    <div class="login-footer bg-gray-50 py-3 text-center text-xs text-qqgray">
+        © 1998-2025 Tencent. All Rights Reserved.
+    </div>
+</div>
+
+<script>
+    // 提示框功能
+    function showToast(message, type = 'info') {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.className = 'fixed top-4 right-4 px-4 py-3 rounded-md text-white shadow-lg transform transition-transform duration-300 z-50';
+
+        if (type === 'success') {
+            toast.classList.add('toast-success');
+        } else if (type === 'error') {
+            toast.classList.add('toast-error');
+        }
+
+        toast.classList.remove('translate-x-full');
+
+        setTimeout(() => {
+            toast.classList.add('translate-x-full');
+        }, 3000);
+    }
+
+    // 登录标签切换功能
+    const tabItems = document.querySelectorAll('.tab-item');
+    const accountLogin = document.getElementById('account-login');
+    const qrcodeLogin = document.getElementById('qrcode-login');
+
+    tabItems.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabItems.forEach(item => {
+                item.classList.remove('text-qqblue', 'border-b-2', 'border-qqblue');
+                item.classList.add('text-qqgray');
+            });
+
+            tab.classList.remove('text-qqgray');
+            tab.classList.add('text-qqblue', 'border-b-2', 'border-qqblue');
+
+            if (tab.getAttribute('data-tab') === 'account') {
+                accountLogin.classList.remove('hidden');
+                qrcodeLogin.classList.add('hidden');
+            } else {
+                accountLogin.classList.add('hidden');
+                qrcodeLogin.classList.remove('hidden');
+            }
+        });
+    });
+
+    // 密码显示/隐藏切换
+    const passwordInput = document.getElementById('password');
+    const passwordToggle = document.querySelector('.password-toggle');
+
+    passwordToggle.addEventListener('click', () => {
+        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordInput.setAttribute('type', type);
+
+        const icon = passwordToggle.querySelector('i');
+        if (type === 'password') {
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    });
+
+    // 在线状态选择
+    const statusSelector = document.querySelector('.status-selector span');
+    const statusOptions = document.querySelector('.status-options');
+
+    statusSelector.addEventListener('click', (e) => {
+        e.stopPropagation();
+        statusOptions.classList.toggle('hidden');
+    });
+
+    const statusOptionsItems = document.querySelectorAll('.status-option');
+    statusOptionsItems.forEach(option => {
+        option.addEventListener('click', () => {
+            const statusText = option.textContent;
+            statusSelector.querySelector('span:first-child').textContent = statusText;
+            statusOptions.classList.add('hidden');
+        });
+    });
+
+    document.addEventListener('click', () => {
+        statusOptions.classList.add('hidden');
+    });
+
+    // 刷新二维码
+    const refreshQrcode = document.querySelector('.refresh-qrcode');
+    const qrcodeImg = document.querySelector('#qrcode-login img');
+    const qrcodeExpired = document.getElementById('qrcode-expired');
+
+    refreshQrcode.addEventListener('click', () => {
+        qrcodeImg.src = `https://picsum.photos/200/200?random=${Math.random()}`;
+        qrcodeExpired.classList.add('hidden');
+
+        qrcodeImg.classList.add('animate-spin');
+        setTimeout(() => {
+            qrcodeImg.classList.remove('animate-spin');
+        }, 500);
+    });
+
+    // 模拟二维码过期
+    setTimeout(() => {
+        if (!qrcodeLogin.classList.contains('hidden')) {
+            qrcodeExpired.classList.remove('hidden');
+        }
+    }, 30000);
+
+    // 关闭按钮功能
+    const closeBtn = document.querySelector('.close-btn');
+    closeBtn.addEventListener('click', () => {
+        const container = document.querySelector('.login-container');
+        container.classList.add('opacity-0', 'scale-95');
+        setTimeout(() => {
+            container.style.display = 'none';
+        }, 300);
+    });
+
+    // 登录表单提交处理
+    const loginForm = document.getElementById('loginForm');
+    loginForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const email = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        const remember = document.getElementById('remember').checked;
+
+        const submitBtn = this.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i> 登录中...';
+
+        try {
+            // 调用auth.login()方法处理登录
+            const response = await auth.login({
+                email,
+                password,
+                remember
+            });
+
+            if (response.data.success) {
+                showToast('登录成功！即将进入主页', 'success');
+                setTimeout(() => {
+                    window.location.href = 'index.html'; // 登录成功后跳转的页面
+                }, 1500);
+            } else {
+                const errorMessage = '登录失败：请检查账号密码';
+                showToast(errorMessage, 'error');
+            }
+        } catch (error) {
+            if (error.response) {
+                const errorMessage = error.response.data.message || '登录失败：服务器错误';
+                showToast(errorMessage, 'error');
+            } else if (error.request) {
+                showToast('网络错误，请检查您的网络连接', 'error');
+            } else {
+                showToast('登录过程中发生错误', 'error');
+            }
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '登录';
+
+            // 移除输入框错误状态
+            document.getElementById('username').classList.remove('border-red-500');
+            document.getElementById('password').classList.remove('border-red-500');
+        }
+    });
+</script>
+</body>
+</html>
