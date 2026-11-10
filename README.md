@@ -4,6 +4,20 @@
 
 项目没有使用 Spring 等框架，Servlet → Service → DAO 三层手写实现，适合作为理解 JavaWeb 请求分发、原生 JDBC 与连接池、JWT 认证的实践参考。
 
+## 界面预览
+
+**首页**：渐变背景搭配推荐歌单卡片，底部为常驻播放栏，支持歌词、播放模式与音量控制。
+
+<img src="doc/screenshots/home.jpg" alt="首页" width="900">
+
+**搜索结果**：按歌曲、专辑、歌手、歌单、MV 分类展示，列表含封面、专辑与时长，点击即刻播放。
+
+<img src="doc/screenshots/search.png" alt="搜索结果" width="900">
+
+**播放页**：全屏模糊封面背景，滚动歌词逐行高亮，支持评论与分享。
+
+<img src="doc/screenshots/player.jpg" alt="播放页" width="900">
+
 ## 功能特性
 
 **用户**
@@ -63,7 +77,7 @@ ListenToMusic
 │   ├── sql/lvdong_music_db.sql          数据库建表脚本
 │   └── logback.xml
 ├── src/main/webapp                      页面与静态资源
-├── doc/                                 项目文档
+├── doc/                                 项目文档与界面截图
 └── pom.xml
 ```
 
