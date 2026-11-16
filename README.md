@@ -1,170 +1,75 @@
 # LvDong-Music · 律动音乐
 
-《律动音乐》是一个基于传统 Java Servlet 技术栈的音乐流媒体网站，包含用户体系、在线播放、评论互动、歌曲上传与哼唱识曲等模块。
+律动音乐是一个 JavaWeb 音乐网站，围绕歌曲搜索、HLS 在线播放、用户账号、收藏、评论和歌曲上传构建。目前保留 Servlet 版本，同时逐步迁移至 Vue 3 与 Spring Boot 分层单体。
 
-历史版本采用 Servlet → Service → DAO 三层手写实现，适合作为理解 JavaWeb 请求分发、原生 JDBC 与连接池、JWT 认证的实践参考。当前在保留旧 WAR 的同时，逐步迁移到独立 Spring Boot 后端。
+## 项目组成
 
-## 架构升级进展
+| 模块 | 技术栈 | 当前能力 |
+| --- | --- | --- |
+| 旧站 `src/` | Java 16 编译目标、Servlet 3.1、JDBC、HikariCP、MySQL、Tomcat 9 | 用户体系、搜索、HLS 播放、收藏、评论、上传及音乐人申请等业务 |
+| [新前端](frontend/README.md) | Vue 3、TypeScript、Vite、Vue Router、Pinia、HLS.js | 公开搜索、分页、播放队列、常驻播放器及旧媒体适配 |
+| [独立后端](backend/README.md) | Java 21、Spring Boot 4.1.2、JDBC | 匿名公开搜索 API 与旧 JSON 搜索兼容入口 |
 
-历史学习版本见 [v1.0.0](https://github.com/xgx2025/LvDong-Music/releases/tag/v1.0.0)。当前升级先建立 Servlet 业务回归基线，再渐进迁移到 Vue 3 + TypeScript 与 Spring Boot 分层单体。
+新前端和独立后端尚未覆盖全部旧站业务。新前端暂不提供账号登录、收藏写入、评论、个人中心及歌词同步；独立后端目前只提供公开搜索。旧页面中的推荐、歌单与 AI 演示不代表完整后端能力。
 
-查看[迁移阶段与验收标准](architecture/migration.md)、[接口兼容契约](architecture/api-contract.md)和[首阶段验证记录](architecture/verification.md)。已交付收藏事务与HLS任务可靠性改造（含隔离MySQL和实际FFmpeg回归）。已新增 [Java 21 / Boot 4.1.2 独立后端](backend/README.md)，提供公开搜索新 API 与旧 JSON 搜索适配，并保留根目录 WAR 构建。已新增 [Vue 3 独立前端](frontend/README.md)，交付公开搜索、播放队列与常驻播放器基础；旧鉴权媒体通过显式配置适配，尚未完成真实站点播放验收。旧页面中的推荐、歌单和 AI 演示不代表已有完整后端功能。
+历史学习版本见 [v1.0.0](https://github.com/xgx2025/LvDong-Music/tree/v1.0.0)。
 
-旧截图链接已失效，暂移除引用。后续经验证的公开截图统一放在 `assets/screenshots/` 并使用仓库相对链接。
+## 主要设计
 
-## 功能特性
-
-**用户**
-
-- 邮箱验证码注册、登录、找回密码
-- JWT 双 Token 认证（accessToken 30 分钟 / refreshToken 7 天），支持登出与 Token 刷新
-- 个人资料、头像与密码修改
-
-**音乐**
-
-- HLS 分片流媒体播放，前端通过 HLS.js 播放并自定义 m3u8 加载器
-- 歌词同步展示、封面与专辑信息
-- 关键词搜索与分类浏览
-- 歌曲上传，按「审核中 / 审核通过 / 审核不通过」管理状态
-- 音乐人申请与审核状态查询
-
-**互动**
-
-- 歌曲点赞与收藏
-- 评论、多级回复、评论点赞
-- 问题反馈
-
-**其他**
-
-- 哼唱识曲：录音上传后调用讯飞 webqbh 接口识别歌曲
-- AI 助手页面（前端模拟交互，未接入大模型）
-- WebSocket 实时通道
-- Tailwind CSS 响应式布局
-
-## 技术栈
-
-| 分类 | 技术 |
-| --- | --- |
-| 后端 | Java 16+、Servlet 3.1、原生 JDBC、HikariCP 连接池 |
-| 数据库 | MySQL 8.0（10 张表，utf8mb4） |
-| 认证 | JJWT 0.9.1、jBCrypt 密码哈希 |
-| JSON | Gson |
-| 日志 | SLF4J + Logback |
-| 媒体处理 | FFmpeg（音频转 HLS 切片） |
-| 前端 | 原生 HTML/CSS/JS、Tailwind CSS、Axios、HLS.js（CDN 引入） |
-| 构建与部署 | Maven（WAR 包）、Tomcat 9 |
+- **业务分层**：旧站采用 Servlet → Service → DAO，新后端采用 Controller → Service → JDBC DAO，事务由 Service 管理。
+- **搜索**：只返回审核通过的歌曲，按歌曲分页并批量获取关联歌手；新 API 使用字符串 ID，避免前端大整数精度丢失。
+- **媒体播放**：FFmpeg 生成完整加密 HLS，转换任务有界排队、同歌去重，清单、切片和密钥经过鉴权。
+- **收藏一致性**：收藏与取消收藏支持幂等，记录变更和计数更新处于同一事务。
+- **常驻播放器**：新前端由应用级状态管理单一 Audio 引擎，路由切换保留队列及播放进度。
 
 ## 目录结构
 
-```
+```text
 ListenToMusic
-├── src/main/java
-│   ├── servlet/      控制器，BaseServlet 通过 ?action= 反射分发
-│   ├── service/      业务逻辑层（含 impl 实现）
-│   ├── dao/          数据访问层，原生 JDBC（含 impl 实现）
-│   ├── pojo/         实体类
-│   ├── filter/       CORS 与 JWT 校验过滤器
-│   ├── annotation/   @ParamName 请求参数绑定
-│   └── utils/        配置读取、JWT、雪花 ID、邮件、HLS 等工具
-├── src/main/resources
-│   ├── application.properties.example   配置模板（复制后填写）
-│   ├── sql/lvdong_music_db.sql          数据库建表脚本
-│   └── logback.xml
-├── src/main/webapp                      页面与静态资源
-├── src/test                             隔离数据库与 Servlet 业务回归
-├── frontend/                            Vue/TS 应用外壳、搜索、队列、常驻播放器及隔离回归
-├── backend/                             独立 Boot JAR、公开搜索及 HTTP 集成回归
-├── architecture/                        迁移方案、接口契约与验证记录
-└── pom.xml
+├── src/main/java/          Servlet、Service、DAO 与工具类
+├── src/main/resources/     配置模板、日志配置与 SQL
+├── src/main/webapp/         旧站页面与静态资源
+├── src/test/               Java 回归测试源码
+├── frontend/               Vue 应用及前端测试源码
+├── backend/                独立 Spring Boot 项目
+└── pom.xml                 旧站 WAR 构建入口
 ```
 
-## 快速开始
+## 基本运行
 
-### 环境要求
+三个模块分别构建，根 Maven 项目不聚合 `backend/`。
 
-- JDK 16 及以上（推荐 17）
-- Maven 3.6+
-- MySQL 8.0
-- Tomcat 9.x
-- FFmpeg（可选，HLS 转码需要）
+### Servlet 旧站
 
-> 项目基于 `javax.servlet`，Tomcat 10 及以上已迁移到 `jakarta.*` 命名空间，无法直接使用。
+环境：JDK 16+、Maven、MySQL 8、Tomcat 9；HLS 转换还需要 FFmpeg。
 
-### 1. 初始化数据库
+配置项见 [application.properties.example](src/main/resources/application.properties.example)。通过环境变量或 `APP_CONFIG_FILE` 指定外部配置；真实配置文件默认不打入 WAR。
 
-```sql
-CREATE DATABASE lvdong_music_db DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
-```
-
-```bash
-mysql -uroot -p lvdong_music_db < src/main/resources/sql/lvdong_music_db.sql
-```
-
-脚本只包含表结构，不含示例数据。
-
-### 2. 准备配置文件
-
-```bash
-cp src/main/resources/application.properties.example src/main/resources/application.properties
-```
-
-按文件内注释填写数据库账号、JWT 密钥与存储路径。`application.properties` 已被 Git 忽略，且默认不打入 WAR。部署使用环境变量，或设置 `APP_CONFIG_FILE` 指向外部配置文件；测试使用独立的内存数据库和合成配置。
-
-### 3. 构建
-
-```bash
+```sh
 mvn clean verify
 ```
 
-生成 `target/ListenToMusic.war`。
+产物为 `target/ListenToMusic.war`。旧页面依赖 `/xgxmusic` context，运行时需使用该部署路径。旧站采用 `javax.servlet`，不能直接放入 Tomcat 10/11。
 
-### 4. 部署到 Tomcat
+### Vue 前端
 
-将 WAR 复制到 Tomcat 的 `webapps` 目录，并重命名为 `xgxmusic.war`：
-
-```bash
-cp target/ListenToMusic.war $CATALINA_HOME/webapps/xgxmusic.war
+```sh
+cd frontend
+npm ci
+npm run dev
 ```
 
-> 页面中的 `base href` 与 Axios `baseURL` 硬编码为 `/xgxmusic`，因此 context path 必须保持为 `xgxmusic`，否则接口请求会 404。
+### Spring Boot 后端
 
-启动 Tomcat 后访问：<http://localhost:8080/xgxmusic/>
+使用 Java 21，设置 `DB_URL`、`DB_USERNAME`、`DB_PASSWORD` 后启动：
 
-## 配置说明
+```sh
+mvn -f backend/pom.xml clean verify
+java -jar backend/target/lvdong-backend-0.1.0-SNAPSHOT.jar
+```
 
-| 配置项 | 说明 |
-| --- | --- |
-| `db.url` / `db.username` / `db.password` | MySQL 连接信息 |
-| `jwt.access.secret` / `jwt.refresh.secret` | Token 签名密钥，须为 Base64 字符集，可用 `openssl rand -hex 32` 生成 |
-| `jwt.access.expire` / `jwt.refresh.expire` | Token 有效期（毫秒） |
-| `smtp.*` | 邮箱验证码发送，未配置时注册与找回密码不可用 |
-| `storage.tomcat.path` | 歌曲、封面等静态资源存放目录（需 Tomcat 可访问） |
-| `storage.project.path` | 项目 webapp 目录，用于本地资源同步 |
-| `ffmpeg.path` / `hls.root.dir` | FFmpeg 可执行文件路径与 HLS 切片输出目录 |
-| `cors.allowed.origins` | 允许的跨域来源，逗号分隔 |
-| `qbh.appid` / `qbh.api.key` | 讯飞哼唱识别凭证，未配置时识曲功能不可用 |
+新后端默认端口为8081。前端默认代理公开 API 到此端口，媒体仍需单独连接旧站。
 
-所有配置项都支持环境变量覆盖，优先级高于配置文件，例如 `DB_PASSWORD`、`JWT_ACCESS_SECRET`。
+## 使用说明
 
-## 接口约定
-
-后端接口统一通过 `?action=方法名` 分发：`BaseServlet` 用反射调用对应方法，参数经 `@ParamName` 注解绑定，响应为 Gson 序列化的 JSON。
-
-| 端点 | 职责 |
-| --- | --- |
-| `/userServlet` | 登录、注册、找回密码、登出、刷新 Token、修改资料 |
-| `/authServlet` | 邮箱验证码发送与校验 |
-| `/musicServlet` | 歌曲上传 |
-| `/singerServlet` | 音乐人申请与审核状态查询 |
-| `/searchServlet` | 歌曲搜索 |
-| `/commentServlet` | 发表评论、评论列表、评论数量、评论点赞 |
-| `/favoriteServlet` | 收藏与取消收藏 |
-| `/recognitionServlet` | 哼唱识曲 |
-| `/hls` | HLS 播放列表与切片输出 |
-
-受保护接口需要在请求头携带 `Authorization: Bearer <accessToken>`，公开页面与登录、注册等 action 在 `TokenFilter` 中白名单放行。
-
-## 说明
-
-- 本项目为学习实践项目，代码中的音乐、图片等资源版权归原作者所有，请勿用于商业用途。
-- 数据库口令、JWT 密钥、第三方接口密钥请通过本地配置文件或环境变量提供，不要提交到仓库。
+项目用于学习与技术实践。音乐、图片等资源的版权归各自权利人所有，使用或再分发时需自行确认授权。数据库密码、JWT 密钥及第三方服务凭证应通过本地配置或环境变量提供。

@@ -12,7 +12,7 @@ class SearchMySqlIntegrationTest extends SearchHttpTest {
         String url = System.getenv("DB_URL");
         if (!"true".equals(System.getenv("LVDONG_ISOLATED_MYSQL")) || url == null
                 || !url.matches("jdbc:mysql://127\\.0\\.0\\.1:[0-9]+/lvdong_ephemeral_regression\\?.*")) {
-            throw new IllegalStateException("Use scripts/run-isolated-mysql.py --backend");
+            throw new IllegalStateException("Requires a dedicated temporary MySQL database and isolation marker");
         }
         properties.add("spring.datasource.url", () -> url);
         properties.add("spring.datasource.username", () -> "root");
