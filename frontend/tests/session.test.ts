@@ -4,6 +4,7 @@ import { useSessionStore } from "../src/stores/session";
 import { parseLyrics, lyricIndex } from "../src/player/lyrics";
 import { readFile } from "../src/api/account";
 
+const actionOf = (url: string) => new URL(url).searchParams.get("action") || ({ refresh: "refreshToken" }[new URL(url).pathname.split("/").pop()!] ?? new URL(url).pathname.split("/").pop());
 const user = { id: "9223372036854775807", username: "测试用户", email: "test@example.test" };
 const result = { success: true, user, tokens: { accessToken: "old-access", refreshToken: "refresh" } };
 let saved = new Map<string, string>();
@@ -17,7 +18,7 @@ afterEach(() => vi.unstubAllGlobals());
 it("coalesces concurrent 401s into one refresh and retries with the renewed token", async () => {
   let refreshes = 0;
   const fetcher = vi.fn(async (url: string, init: RequestInit) => {
-    const action = new URL(url).searchParams.get("action");
+    const action = actionOf(url);
     if (action === "login") return Response.json(result);
     if (action === "refreshToken") { refreshes++; await Promise.resolve(); return Response.json({ tokens: { accessToken: "new-access", refreshToken: "refresh" } }); }
     return (init.headers as Record<string, string>).Authorization === "Bearer old-access"
@@ -34,7 +35,7 @@ it("coalesces concurrent 401s into one refresh and retries with the renewed toke
 it("does not revive credentials when a refresh arrives after logout", async () => {
   let release!: (response: Response) => void;
   vi.stubGlobal("fetch", vi.fn(async (url: string) => {
-    const action = new URL(url).searchParams.get("action");
+    const action = actionOf(url);
     if (action === "login") return Response.json(result);
     if (action === "refreshToken") return new Promise<Response>(resolve => { release = resolve; });
     return Response.json({ success: true });
@@ -50,7 +51,7 @@ it("does not revive credentials when a refresh arrives after logout", async () =
 it("clears all state after rejected renewal and retries a request at most once", async () => {
   let businessCalls = 0;
   vi.stubGlobal("fetch", vi.fn(async (url: string) => {
-    const action = new URL(url).searchParams.get("action");
+    const action = actionOf(url);
     if (action === "login") return Response.json(result);
     if (action === "refreshToken") return Response.json({ success: false, message: "会话已撤销" });
     businessCalls++; return new Response("", { status: 401 });
@@ -61,7 +62,7 @@ it("clears all state after rejected renewal and retries a request at most once",
 });
 
 it("rejects business errors instead of reporting a successful profile save", async () => {
-  vi.stubGlobal("fetch", vi.fn(async (url: string) => Response.json(new URL(url).searchParams.get("action") === "login" ? result : { success: false, message: "用户名已存在" })));
+  vi.stubGlobal("fetch", vi.fn(async (url: string) => Response.json(actionOf(url) === "login" ? result : { success: false, message: "用户名已存在" })));
   const session = useSessionStore(); await session.login(user.email, "password");
   await expect(session.request("userServlet", "updateProfile", { username: "duplicate" })).rejects.toThrow("用户名已存在");
   expect(session.user?.username).toBe("测试用户"); expect(saved.size).toBe(0);
@@ -84,4 +85,15 @@ it("parses multi-tag LRC, offset, fractions and finds the line after seeking", (
 it("rejects unsafe or oversized uploads before reading them", async () => {
   await expect(readFile({ size: 4 * 1024 * 1024, type: "image/png" } as File, "image")).rejects.toThrow("大小限制");
   await expect(readFile({ size: 100, type: "text/html" } as File, "image")).rejects.toThrow("不支持");
+});
+
+it("routes migrated actions to Boot and leaves pending writes on the WAR", async () => {
+  const fetcher = vi.fn(async (url: string) => Response.json(actionOf(url) === "login" ? result : { success: true }));
+  vi.stubGlobal("fetch", fetcher);
+  const session = useSessionStore(); await session.login(user.email, "password");
+  await session.request("favoriteServlet", "addFavorite", { songId: "9007199254740993" });
+  await session.request("commentServlet", "likeComment", { commentId: "7", like: true });
+  expect(fetcher.mock.calls.map(([url]) => new URL(url).pathname)).toEqual([
+    "/api/v1/session/login", "/api/v1/library/favorite", "/legacy/commentServlet",
+  ]);
 });

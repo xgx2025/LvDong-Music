@@ -45,6 +45,11 @@ public class JwtTokenUtil {
      * 验证Token并获取claims
      */
     public static Claims getClaimsFromToken(String token, String secret) {
+        if (token != null && token.startsWith("b1")) {
+            if (!java.util.Objects.equals(secret, ACCESS_TOKEN_SECRET))
+                throw new IllegalArgumentException("Boot刷新凭证只能由Boot处理");
+            return new dao.impl.BootSessionDao().validateAccess(token);
+        }
         return Jwts.parser()
                 .setSigningKey(secret)
                 .parseClaimsJws(token)

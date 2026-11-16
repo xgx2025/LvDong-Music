@@ -35,6 +35,39 @@ public class HlsDeliveryRegressionTest extends TestCase {
             return null;
         });
     }
+    public void testBootSharedSessionRevokesManifestKeyAndSegment() throws Exception {
+        token = "b1a_" + "x".repeat(43);
+        String hash=java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                .digest(token.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        try (var conn=utils.DatabaseUtil.getConnection(); var sql=conn.createStatement()) {
+            assertTrue(conn.getMetaData().getURL().startsWith("jdbc:h2:mem:"));
+            sql.execute("CREATE TABLE IF NOT EXISTS auth_sessions(id VARCHAR(36) PRIMARY KEY,user_id BIGINT,refresh_hash CHAR(64),expires_at BIGINT,revoked INT)");
+            sql.execute("CREATE TABLE IF NOT EXISTS auth_access_tokens(token_hash CHAR(64) PRIMARY KEY,session_id VARCHAR(36),expires_at BIGINT)");
+            sql.execute("DELETE FROM auth_access_tokens"); sql.execute("DELETE FROM auth_sessions");
+            sql.execute("INSERT INTO auth_sessions VALUES('test-session',7001,'unused',"+(System.currentTimeMillis()+60000)+",0)");
+            try(var insert=conn.prepareStatement("INSERT INTO auth_access_tokens VALUES(?,'test-session',?)")) {
+                insert.setString(1,hash);insert.setLong(2,System.currentTimeMillis()+60000);insert.executeUpdate();
+            }
+            assertEquals("7001",JwtTokenUtil.getClaimsFromToken(token,JwtTokenUtil.ACCESS_TOKEN_SECRET).get("id"));
+            testNativeManifestUsesAuthenticatedSegmentAndKeyUrls();
+            testEncryptionKeyIsServedWithNoStore();
+            try { new UserServlet().refreshToken(token);fail("Boot access must never mint legacy JWTs"); }
+            catch(IllegalArgumentException expected) { }
+            HttpServletRequest logout=(HttpServletRequest)Proxy.newProxyInstance(getClass().getClassLoader(),new Class<?>[]{HttpServletRequest.class},
+                (p,m,a)->m.getName().equals("getHeader")?"Bearer "+token:null);
+            assertTrue(((com.google.gson.JsonObject)new UserServlet().logout(logout,null)).get("success").getAsBoolean());
+            for (String file : List.of("index.m3u8",keyName,"seg-test-00000.ts")) {
+                int[] status={200};StringWriter body=new StringWriter();
+                HttpServletResponse response=(HttpServletResponse)Proxy.newProxyInstance(getClass().getClassLoader(),new Class<?>[]{HttpServletResponse.class},(p,m,a)-> {
+                    if(m.getName().equals("setStatus")) status[0]=(Integer)a[0];
+                    if(m.getName().equals("getWriter")) return new PrintWriter(body);return null;
+                });
+                servlet.serveHls("1",file,request(),response);assertEquals(401,status[0]);
+            }
+            try { new dao.impl.BootSessionDao().validateAccess(token);fail("fresh validator must reject persisted revocation"); }
+            catch(IllegalArgumentException expected) { }
+        }
+    }
     public void testNativeManifestUsesAuthenticatedSegmentAndKeyUrls() throws Exception {
         StringWriter text = new StringWriter();
         Map<String,String> headers = new HashMap<>();

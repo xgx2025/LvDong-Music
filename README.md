@@ -8,9 +8,9 @@
 | --- | --- | --- |
 | 旧站 `src/` | Java 16 编译目标、Servlet 3.1、JDBC、HikariCP、MySQL、Tomcat 9 | 用户体系、搜索、HLS 播放、收藏、评论、上传及音乐人申请等业务 |
 | [新前端](frontend/README.md) | Vue 3、TypeScript、Vite、Vue Router、Pinia、HLS.js | 公开搜索、账号与个人中心、收藏、评论、上传、识曲、歌词与常驻播放器 |
-| [独立后端](backend/README.md) | Java 21、Spring Boot 4.1.2、JDBC | 匿名公开搜索 API 与旧 JSON 搜索兼容入口 |
+| [独立后端](backend/README.md) | Java 21、Spring Boot 4.1.2、JDBC | 公开搜索、持久会话、本人收藏与歌曲详情 API |
 
-新前端已接入主要旧站业务，其中账号、收藏、评论、上传、识曲和媒体继续调用 Servlet 服务；独立后端目前只提供公开搜索。推荐、歌单与 AI 演示不代表完整后端能力；反馈目前支持本机导出，第三方 OAuth 尚未接入。
+新前端的公开搜索、登录会话、本人收藏和歌曲详情已接入独立后端；注册、验证码、密码重置、资料编辑、音乐人、评论、上传、识曲和媒体仍调用 Servlet。推荐、歌单与 AI 演示不代表完整后端能力；反馈目前支持本机导出，第三方 OAuth 尚未接入。
 
 历史学习版本见 [v1.0.0](https://github.com/xgx2025/LvDong-Music/tree/v1.0.0)。
 
@@ -61,7 +61,7 @@ npm run dev
 
 ### Spring Boot 后端
 
-使用 Java 21，设置 `DB_URL`、`DB_USERNAME`、`DB_PASSWORD` 后启动：
+使用 Java 21，按[后端说明](backend/README.md)填写本地配置文件，或设置 `DB_URL`、`DB_USERNAME`、`DB_PASSWORD` 后启动：
 
 ```sh
 mvn -f backend/pom.xml clean verify

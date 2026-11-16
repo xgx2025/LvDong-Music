@@ -1,6 +1,10 @@
 server:
   port: ${PORT:8081}
 spring:
+  config:
+    import:
+      - "optional:file:./.env[.properties]"
+      - "optional:file:./backend/.env[.properties]"
   application:
     name: lvdong-backend
   datasource:

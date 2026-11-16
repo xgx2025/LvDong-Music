@@ -237,6 +237,11 @@ public class UserServlet extends BaseServlet{
     protected Object logout(HttpServletRequest request, @ParamName("refreshToken") String refreshTokenParam) {
         try {
             String authHeader = request.getHeader("Authorization");
+            if ((authHeader != null && authHeader.startsWith("Bearer b1")) ||
+                    (refreshTokenParam != null && refreshTokenParam.startsWith("b1"))) {
+                new dao.impl.BootSessionDao().revoke(authHeader == null ? null : authHeader.substring(7), refreshTokenParam);
+                JsonObject response = new JsonObject(); response.addProperty("success", true); return response;
+            }
             if (authHeader != null && authHeader.startsWith("Bearer ")) {
                 String accessToken = authHeader.substring(7);
                 // 将access token加入黑名单
@@ -277,7 +282,7 @@ public class UserServlet extends BaseServlet{
     protected JsonObject refreshToken(@ParamName("refreshToken") String refreshToken) {
         log.info("正在刷新token");
         try {
-            if (refreshToken == null || refreshToken.isBlank() || TokenBlacklist.contains(refreshToken)) {
+            if (refreshToken == null || refreshToken.isBlank() || refreshToken.startsWith("b1") || TokenBlacklist.contains(refreshToken)) {
                 throw new IllegalArgumentException("刷新凭证已撤销或缺失");
             }
             // 1. 验证refreshToken的有效性

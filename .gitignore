@@ -42,6 +42,8 @@ build/
 src/main/resources/application.properties
 *.local.properties
 .env
+/backend/.env.*
+!/backend/.env.example
 
 ### 运行与依赖产物 ###
 node_modules/
