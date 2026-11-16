@@ -4,8 +4,8 @@ import javax.mail.*;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 import java.io.UnsupportedEncodingException;
+import java.security.SecureRandom;
 import java.util.Properties;
-import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -22,6 +22,10 @@ public class EmailVerificationCodeUtil {
     private static final int CODE_LENGTH = 6;
     // 发送间隔限制（秒）- 防止频繁发送
     private static final long SEND_INTERVAL_SECONDS = 60;
+    // 单次验证码允许的最大校验次数，超过即作废，防止 6 位码被爆破
+    private static final int MAX_VERIFY_ATTEMPTS = 5;
+    // 验证码必须用密码学安全随机数，避免 Random 序列可预测
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     // 邮件服务器配置
     private static final String SMTP_HOST = ConfigUtil.get("SMTP_HOST", "smtp.host", "smtp.qq.com");
@@ -37,7 +41,8 @@ public class EmailVerificationCodeUtil {
     private static class CodeInfo {
         String code;         // 验证码
         long createTime;     // 创建时间（毫秒）
-        long lastSendTime;   // 最后发送时间（毫秒）- 新增字段
+        volatile long lastSendTime;   // 最后发送时间（毫秒）
+        volatile int attempts;        // 已校验次数
 
         CodeInfo(String code) {
             this.code = code;
@@ -120,8 +125,19 @@ public class EmailVerificationCodeUtil {
         }
 
         CodeInfo codeInfo = codeStore.get(email);
-        // 验证码不存在、已过期或不匹配
-        if (codeInfo == null || codeInfo.isExpired() || !codeInfo.code.equals(code)) {
+        // 验证码不存在或已过期
+        if (codeInfo == null || codeInfo.isExpired()) {
+            codeStore.remove(email);
+            return false;
+        }
+
+        // 校验次数超限：直接作废，避免 6 位数字被暴力枚举
+        if (++codeInfo.attempts > MAX_VERIFY_ATTEMPTS) {
+            codeStore.remove(email);
+            return false;
+        }
+
+        if (!codeInfo.code.equals(code)) {
             return false;
         }
 
@@ -143,10 +159,9 @@ public class EmailVerificationCodeUtil {
      * @return 数字验证码
      */
     private static String generateRandomCode() {
-        Random rand = new Random();
         StringBuilder code = new StringBuilder();
         for (int i = 0; i < CODE_LENGTH; i++) {
-            code.append(rand.nextInt(10));
+            code.append(SECURE_RANDOM.nextInt(10));
         }
         return code.toString();
     }

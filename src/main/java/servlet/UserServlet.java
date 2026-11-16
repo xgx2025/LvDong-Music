@@ -35,25 +35,25 @@ public class UserServlet extends BaseServlet{
      * @throws IOException
      */
     protected Object login(@ParamName("email") String email, @ParamName("password") String password) throws ServletException, IOException {
-        log.info("用户登录: email={}", email);
         Map<String,Object> result = new HashMap<>();
         result.put("success",false);
-        // 验证邮箱是否存在
-        if (!userService.existsByEmail(email)) {
-            log.warn("该邮箱尚未注册: {}", email);
-            result.put("message","该邮箱尚未注册");
-            return result;
 
+        // 参数合法性校验（邮箱长度上限；密码不做长度拦截，避免误伤已注册的长口令用户）
+        if (email == null || password == null || email.length() > 254) {
+            result.put("message", "邮箱或密码错误");
+            return result;
         }
 
         // 验证密码
         User user = userService.login(email, password);
-        log.debug("登录查询用户: {}", user);
         if (user == null) {
-            log.warn("邮箱或密码错误: email={}", email);
+            // 不区分“邮箱不存在”与“密码错误”，避免账号枚举
+            // 邮箱存在性判断已在 userService.login 内部完成，此处不额外查询
+            log.warn("登录失败: email={}", email);
             result.put("message","邮箱或密码错误");
             return result;
         }
+        log.info("用户登录成功: userId={}", user.getId());
 
         // 准备Token claims（仅包含必要的用户标识，不包含敏感信息）
         Map<String, Object> claims = new HashMap<>();

@@ -648,6 +648,14 @@
     let currentIndex = parseInt(localStorage.getItem('currentSongIndex')) || 0;
 
     const songId = getSongId(); // 获取当前歌曲ID
+
+    // 播放鉴权：hls.js 走 Authorization 头，Safari 原生播放只能把凭证放在查询参数里
+    function withStreamToken(url) {
+        const token = (typeof auth !== 'undefined' && auth.getAccessToken) ? auth.getAccessToken() : null;
+        if (!token) return url;
+        return `${url}${url.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}`;
+    }
+
     // 自定义m3u8清单加载器（pLoader） - 继承默认Loader
     class CustomPlaylistLoader extends Hls.DefaultConfig.loader {
         constructor(config) {
@@ -664,7 +672,7 @@
                     // 构建目标URL
                     const currentSongId = getSongId();
                     const baseUrl = document.baseURI;
-                    context.url = `${baseUrl}hls?action=serveHls&songId=${currentSongId }&fileName=index.m3u8`;
+                    context.url = withStreamToken(`${baseUrl}hls?action=serveHls&songId=${currentSongId }&fileName=index.m3u8`);
                     console.log('重写m3u8请求URL:', context.url);
                 }
 
@@ -691,7 +699,7 @@
                     const originalUrl = context.url;
                     const tsFileName = originalUrl.split('/').pop();
                     const baseUrl = document.baseURI;
-                    context.url = `${baseUrl}hls?action=serveHls&songId=${currentSongId}&fileName=${tsFileName}`;
+                    context.url = withStreamToken(`${baseUrl}hls?action=serveHls&songId=${currentSongId}&fileName=${tsFileName}`);
                     console.log('TS路径重写成功:', context.url);
                 }
                 originalLoad(context, config, callbacks);
@@ -1495,7 +1503,7 @@
                 });
 
                 const baseUrl = document.baseURI;
-                const m3u8Url = `${baseUrl}hls?action=serveHls&songId=${songId}&fileName=index.m3u8`;
+                const m3u8Url = withStreamToken(`${baseUrl}hls?action=serveHls&songId=${songId}&fileName=index.m3u8`);
                 hls.loadSource(m3u8Url);
                 hls.attachMedia(audioPlayer);
 
@@ -1517,11 +1525,16 @@
                     }
                 });
 
-                hls.on(Hls.Events.ERROR, (event, data) => {
+                hls.on(Hls.Events.ERROR, async (event, data) => {
                     console.error('HLS错误:', data);
                     if (data.fatal) {
                         switch(data.type) {
                             case Hls.ErrorTypes.NETWORK_ERROR:
+                                // 分片请求带的是访问令牌，长时间播放后令牌过期会返回 401，
+                                // 此时先刷新令牌再重试，避免原地无限重试
+                                if (data.response && data.response.code === 401) {
+                                    await auth.refreshToken();
+                                }
                                 hls.startLoad();
                                 break;
                             case Hls.ErrorTypes.MEDIA_ERROR:
@@ -1537,7 +1550,7 @@
             } else if (audioPlayer.canPlayType('application/vnd.apple.mpegurl')) {
                 // Safari原生支持逻辑
                 const baseUrl = document.baseURI;
-                audioPlayer.src = `${baseUrl}hls?action=serveHls&songId=${songId}&fileName=index.m3u8`;
+                audioPlayer.src = withStreamToken(`${baseUrl}hls?action=serveHls&songId=${songId}&fileName=index.m3u8`);
                 audioPlayer.addEventListener('loadedmetadata', () => {
                     if (shouldAutoPlay && hasUserInteraction) {
                         audioPlayer.play()

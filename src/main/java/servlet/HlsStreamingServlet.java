@@ -8,6 +8,8 @@ import service.MusicService;
 import service.impl.MusicServiceImpl;
 import utils.ConfigUtil;
 import utils.HlsProcessor;
+import utils.JwtTokenUtil;
+import utils.TokenBlacklist;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -169,53 +171,127 @@ public class HlsStreamingServlet extends BaseServlet {
                          HttpServletRequest request,
                          HttpServletResponse response) throws IOException {
 
-        // 增强 CORS 支持
-        response.setHeader("Access-Control-Allow-Origin", request.getHeader("Origin"));
-        response.setHeader("Access-Control-Expose-Headers", "Content-Length, Content-Range");
-        response.setHeader("Access-Control-Allow-Credentials", "true");
+        // 1. 播放鉴权：允许 Authorization 头，或 ?token= 查询参数（Safari 原生 HLS 无法自定义请求头）
+        if (!authorizePlayback(request)) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json;charset=UTF-8");
+            response.getWriter().write("{\"code\":401,\"message\":\"播放凭证缺失或已失效\"}");
+            response.getWriter().flush();
+            return;
+        }
 
-        // 验证文件路径
-        Path tsPath = Paths.get(hlsRootDir, songId, fileName).normalize();
-        if (!tsPath.startsWith(Paths.get(hlsRootDir).normalize())) {
-            response.sendError(403, "Access denied");
+        // 2. 参数白名单校验，避免把任意路径拼进文件系统
+        if (songId == null || !songId.matches("\\d{1,20}")
+                || fileName == null || !fileName.matches("[A-Za-z0-9_-]{1,64}\\.(m3u8|ts)")) {
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "非法请求参数");
+            return;
+        }
+
+        // 3. 验证文件路径（normalize + 前缀校验，双保险）
+        Path hlsRoot = Paths.get(hlsRootDir).normalize();
+        Path tsPath = hlsRoot.resolve(songId).resolve(fileName).normalize();
+        if (!tsPath.startsWith(hlsRoot)) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Access denied");
             return;
         }
 
         File tsFile = tsPath.toFile();
-        if (!tsFile.exists()) {
-            response.sendError(404, "TS file not found");
+        if (!tsFile.exists() || !tsFile.isFile()) {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND, "TS file not found");
             return;
         }
 
-        // 正确处理 Range 请求（关键！）
+        boolean isPlaylist = fileName.endsWith(".m3u8");
         long length = tsFile.length();
+
+        // 4. 按文件类型返回正确的 Content-Type（m3u8 不能标成 video/mp2t）
+        if (isPlaylist) {
+            response.setContentType("application/vnd.apple.mpegurl");
+            response.setHeader("Cache-Control", "no-store");
+            response.setContentLengthLong(length);
+            try (InputStream in = new FileInputStream(tsFile);
+                 OutputStream out = response.getOutputStream()) {
+                in.transferTo(out);
+            }
+            return;
+        }
+
+        // 5. TS 分片支持 Range 请求
+        response.setContentType("video/mp2t");
+        response.setHeader("Accept-Ranges", "bytes");
+        response.setHeader("Cache-Control", "public, max-age=3600");
+
         long start = 0;
         long end = length - 1;
-
         String rangeHeader = request.getHeader("Range");
-        if (rangeHeader != null) {
-            String[] range = rangeHeader.substring("bytes=".length()).split("-");
-            start = Long.parseLong(range[0]);
-            if (range.length > 1) end = Long.parseLong(range[1]);
-            response.setStatus(206);
+        if (rangeHeader != null && rangeHeader.startsWith("bytes=")) {
+            String[] range = rangeHeader.substring("bytes=".length()).split("-", -1);
+            try {
+                if (range.length > 0 && !range[0].trim().isEmpty()) {
+                    start = Long.parseLong(range[0].trim());
+                }
+                if (range.length > 1 && !range[1].trim().isEmpty()) {
+                    end = Long.parseLong(range[1].trim());
+                }
+            } catch (NumberFormatException e) {
+                response.setStatus(HttpServletResponse.SC_REQUESTED_RANGE_NOT_SATISFIABLE);
+                response.setHeader("Content-Range", "bytes */" + length);
+                return;
+            }
+            if (start < 0 || start >= length || end < start) {
+                response.setStatus(HttpServletResponse.SC_REQUESTED_RANGE_NOT_SATISFIABLE);
+                response.setHeader("Content-Range", "bytes */" + length);
+                return;
+            }
+            if (end >= length) {
+                end = length - 1;
+            }
+            response.setStatus(HttpServletResponse.SC_PARTIAL_CONTENT);
             response.setHeader("Content-Range", "bytes " + start + "-" + end + "/" + length);
         }
 
-        response.setContentType("video/mp2t");
         response.setContentLengthLong(end - start + 1);
-        response.setHeader("Accept-Ranges", "bytes");
 
-        try (InputStream in = new BufferedInputStream(new FileInputStream(tsFile));
+        try (RandomAccessFile raf = new RandomAccessFile(tsFile, "r");
              OutputStream out = response.getOutputStream()) {
-            in.skip(start);
+            raf.seek(start);
             byte[] buffer = new byte[8192];
             long remaining = end - start + 1;
             while (remaining > 0) {
-                int read = in.read(buffer, 0, (int) Math.min(buffer.length, remaining));
+                int read = raf.read(buffer, 0, (int) Math.min(buffer.length, remaining));
                 if (read == -1) break;
                 out.write(buffer, 0, read);
                 remaining -= read;
             }
+        }
+    }
+
+    /**
+     * 校验播放凭证：优先读 Authorization 头，其次读 token 查询参数
+     */
+    private boolean authorizePlayback(HttpServletRequest request) {
+        String token = null;
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            token = authHeader.substring("Bearer ".length()).trim();
+        }
+        if (token == null || token.isEmpty()) {
+            token = request.getParameter("token");
+        }
+        if (token == null || token.isEmpty()) {
+            return false;
+        }
+        try {
+            if (TokenBlacklist.contains(token)) {
+                return false;
+            }
+            if (JwtTokenUtil.isTokenExpired(token, JwtTokenUtil.ACCESS_TOKEN_SECRET)) {
+                return false;
+            }
+            return JwtTokenUtil.getClaimsFromToken(token, JwtTokenUtil.ACCESS_TOKEN_SECRET).get("id") != null;
+        } catch (Exception e) {
+            log.debug("播放凭证校验失败: {}", e.getMessage());
+            return false;
         }
     }
 

@@ -1,3 +1,10 @@
+// 播放鉴权：hls.js 走 Authorization 头，Safari 原生播放只能把凭证放在查询参数里
+function withStreamToken(url) {
+    const token = (typeof auth !== 'undefined' && auth.getAccessToken) ? auth.getAccessToken() : null;
+    if (!token) return url;
+    return `${url}${url.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}`;
+}
+
 // 自定义m3u8清单加载器（pLoader） - 继承默认Loader
 class CustomPlaylistLoader extends Hls.DefaultConfig.loader {
     constructor(config) {
@@ -14,7 +21,7 @@ class CustomPlaylistLoader extends Hls.DefaultConfig.loader {
                 const songId = songIdInput.value.trim();
                 // 构建目标URL
                 const baseUrl = document.baseURI;
-                context.url = `${baseUrl}hls?action=serveHls&songId=${songId}&fileName=index.m3u8`;
+                context.url = withStreamToken(`${baseUrl}hls?action=serveHls&songId=${songId}&fileName=index.m3u8`);
                 console.log('重写m3u8请求URL:', context.url);
             }
 
@@ -42,7 +49,7 @@ class CustomFragmentLoader extends Hls.DefaultConfig.loader {
                 const originalUrl = context.url;
                 const tsFileName = originalUrl.split('/').pop();
                 const baseUrl = document.baseURI;
-                context.url = `${baseUrl}hls?action=serveHls&songId=${songId}&fileName=${tsFileName}`;
+                context.url = withStreamToken(`${baseUrl}hls?action=serveHls&songId=${songId}&fileName=${tsFileName}`);
                 console.log('TS路径重写成功:', context.url);
             }
             originalLoad(context, config, callbacks);
@@ -211,11 +218,15 @@ function initPlayer(m3u8Url) {
 
 
             // 错误处理
-            hls.on(Hls.Events.ERROR, (event, data) => {
+            hls.on(Hls.Events.ERROR, async (event, data) => {
                 console.error('HLS错误:', data);
                 if (data.fatal) {
                     switch(data.type) {
                         case Hls.ErrorTypes.NETWORK_ERROR:
+                            // 令牌过期导致分片被拒时先刷新令牌，再重新拉流
+                            if (data.response && data.response.code === 401) {
+                                await auth.refreshToken();
+                            }
                             hls.startLoad(); // 网络错误重试
                             break;
                         case Hls.ErrorTypes.MEDIA_ERROR:
@@ -232,7 +243,7 @@ function initPlayer(m3u8Url) {
             // Safari原生支持逻辑（同样重写URL）
             const songId = songIdInput.value.trim();
             const baseUrl = document.baseURI;
-            audioElement.src = `${baseUrl}hls?action=serveHls&songId=${songId}&fileName=index.m3u8`;
+            audioElement.src = withStreamToken(`${baseUrl}hls?action=serveHls&songId=${songId}&fileName=index.m3u8`);
             audioElement.addEventListener('loadedmetadata', () => {
                 playerContainer.classList.remove('hidden');
                 audioElement.play().then(resolve).catch(reject);
