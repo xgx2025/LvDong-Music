@@ -9,6 +9,7 @@ import pojo.PageResult;
 import service.CommentService;
 import service.impl.CommentServiceImpl;
 import utils.JwtTokenUtil;
+import utils.PaginationUtil;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -86,6 +87,8 @@ public class CommentServlet extends BaseServlet{
             result.put("comment", savedComment);
 
         } catch (Exception e) {
+            log.error("发表评论失败: resourceType={}, resourceId={}, parentId={}",
+                    resourceType, resourceId, parentId, e);
             result.put("success", false);
             result.put("message", "评论失败，请稍后再试");
         }
@@ -130,6 +133,12 @@ public class CommentServlet extends BaseServlet{
 
         Map<String, Object> response = new HashMap<>();
         try {
+            // 分页参数钳制：客户端可以随便传 size，必须在这里设上限
+            page = PaginationUtil.page(page);
+            size = PaginationUtil.size(size);
+            replyPage = PaginationUtil.page(replyPage);
+            replySize = PaginationUtil.size(replySize, 4);
+
             // 验证token
             if (accessToken == null || accessToken.isEmpty()) {
                 response.put("success", false);
@@ -170,6 +179,8 @@ public class CommentServlet extends BaseServlet{
             error.put("message", "资源ID格式错误");
             return error;
         } catch (Exception e) {
+            log.error("获取评论失败: resourceType={}, resourceId={}, parentId={}",
+                    resourceType, resourceId, parentId, e);
             Map<String, Object> error = new HashMap<>();
             error.put("success", false);
             error.put("message", "获取评论失败，请稍后再试");
@@ -238,6 +249,7 @@ public class CommentServlet extends BaseServlet{
             result.put("success", true);
 
         } catch (Exception e) {
+            log.error("评论点赞操作失败: commentId={}, like={}", commentId, like, e);
             result.put("success", false);
             result.put("message", "操作失败，请稍后再试");
         }

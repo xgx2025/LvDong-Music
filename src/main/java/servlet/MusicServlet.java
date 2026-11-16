@@ -89,6 +89,11 @@ public class MusicServlet extends BaseServlet{
         try {
             musicService.upload(song, musicFile, lyricFile, coverImage);
             result.put("success", true);
+        } catch (IllegalArgumentException e) {
+            // 格式不支持 / 超出大小上限等可预期错误，把原因返回给用户
+            log.warn("音乐上传参数非法: {}", e.getMessage());
+            result.put("success", false);
+            result.put("message", e.getMessage());
         } catch (Exception e) {
             log.error("音乐上传失败: {}", e.getMessage(), e);
             result.put("success", false);

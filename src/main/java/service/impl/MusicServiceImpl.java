@@ -13,15 +13,14 @@ import service.MusicService;
 import utils.ConfigUtil;
 import utils.DatabaseUtil;
 import utils.SnowFlakeUtil;
+import utils.UploadValidator;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Base64;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class MusicServiceImpl implements MusicService {
     MusicDao musicDao =  new MusicDaoImpl();
@@ -70,40 +69,52 @@ public class MusicServiceImpl implements MusicService {
         song.setSongId(String.valueOf(id));
         try {
 
-            String musicType =getFileExtension(musicFile.get("type").getAsString());
+            // 音频：先按 MIME 白名单确定后缀，再校验大小
+            String musicData = requireData(musicFile, "音频文件");
+            UploadValidator.checkBase64Size(musicData, UploadValidator.KIND_AUDIO, "音频文件");
+            String musicType = UploadValidator.resolveExtension(
+                    UploadValidator.KIND_AUDIO, stringField(musicFile, "type"));
             musicFilePath = musicDir + id + "." + musicType;
-            saveBase64File(musicFile.get("data").getAsString(), musicFilePath);
+            saveBase64File(musicData, musicFilePath);
             song.setAudioUrl(musicFilePath);
 
             if (existLyricFile) {
-                song.setLyricUrl("static/lrc/"+id + "." + "lrc");
+                String lyricData = requireData(lyricFile, "歌词文件");
+                UploadValidator.checkBase64Size(lyricData, UploadValidator.KIND_LYRIC, "歌词文件");
+                // 歌词统一存为 .lrc，后缀由白名单决定，不信任客户端 MIME
+                UploadValidator.resolveExtension(UploadValidator.KIND_LYRIC, stringField(lyricFile, "type"));
+                song.setLyricUrl("static/lrc/" + id + "." + "lrc");
                 lyricFilePath = lyricDir + id + "." + "lrc";
-                saveBase64File(lyricFile.get("data").getAsString(), lyricFilePath);
+                saveBase64File(lyricData, lyricFilePath);
                 lyricTempFilePath = lyricTempDir + id + "." + "lrc";
-                saveBase64File(lyricFile.get("data").getAsString(), lyricTempFilePath);
-
+                saveBase64File(lyricData, lyricTempFilePath);
             }
-            String coverType =getFileExtension(coverFile.get("type").getAsString());
-            song.setCoverUrl("static/images/songCovers/"+id+"."+coverType);
-            coverFilePath = coverDir + id + "." + coverType;
-            saveBase64File(coverFile.get("data").getAsString(), coverFilePath);
 
+            String coverData = requireData(coverFile, "封面图片");
+            UploadValidator.checkBase64Size(coverData, UploadValidator.KIND_IMAGE, "封面图片");
+            String coverType = UploadValidator.resolveExtension(
+                    UploadValidator.KIND_IMAGE, stringField(coverFile, "type"));
+            song.setCoverUrl("static/images/songCovers/" + id + "." + coverType);
+            coverFilePath = coverDir + id + "." + coverType;
+            saveBase64File(coverData, coverFilePath);
 
             coverTempFilePath = coverTempDir + id + "." + coverType;
-            saveBase64File(coverFile.get("data").getAsString(), coverTempFilePath);
+            saveBase64File(coverData, coverTempFilePath);
 
             // 开启事务
             DatabaseUtil.beginTransaction();
             boolean flag = musicDao.addSong(song);
-            if (flag){
-                List<Singer> singers = song.getSingers();
-                for (Singer singer : singers) {
-                    singer.setName(singerDao.findSingerNameById(Long.valueOf(singer.getId())));
-                }
-                songSingerDao.addSongSinger(id,singers);
-                // 提交事务
-                DatabaseUtil.commit();
+            if (!flag) {
+                // 写入失败必须抛出，由下方 catch 回滚并清理文件，避免“假成功”
+                throw new IllegalStateException("歌曲记录写入失败");
             }
+            List<Singer> singers = song.getSingers();
+            for (Singer singer : singers) {
+                singer.setName(singerDao.findSingerNameById(Long.valueOf(singer.getId())));
+            }
+            songSingerDao.addSongSinger(id, singers);
+            // 提交事务
+            DatabaseUtil.commit();
 
             return true;
         } catch (Exception e) {
@@ -115,6 +126,10 @@ public class MusicServiceImpl implements MusicService {
             if (lyricTempFilePath!= null && existLyricFile) new File(lyricTempFilePath).delete();
             if (coverFilePath != null) new File(coverFilePath).delete();
             if (coverTempFilePath != null) new File(coverTempFilePath).delete();
+            // 参数类错误（格式不支持、超大小）原样抛出，让前端看到具体原因
+            if (e instanceof IllegalArgumentException) {
+                throw (IllegalArgumentException) e;
+            }
             throw new RuntimeException(e.getMessage(),e);
         }
     }
@@ -147,23 +162,19 @@ public class MusicServiceImpl implements MusicService {
         }
     }
 
-    // 定义MIME类型与文件后缀的映射关系
-    private String getFileExtension(String mimeType) {
-        Map<String, String> mimeToExt = new HashMap<>();
-        // 音频类型映射
-        mimeToExt.put("audio/mpeg", "mp3");
-        mimeToExt.put("audio/wav", "wav");
-        mimeToExt.put("audio/ogg", "ogg");
-        mimeToExt.put("audio/flac", "flac");
-        // 歌词文件（通常是txt或lrc）
-        mimeToExt.put("text/plain", "txt");
-        mimeToExt.put("application/octet-stream", "lrc"); // 若歌词文件MIME类型为二进制流
-        // 图片类型（封面图）
-        mimeToExt.put("image/jpeg", "jpg");
-        mimeToExt.put("image/png", "png");
-        mimeToExt.put("image/gif", "gif");
+    /** 取出 JSON 中的 data 字段，缺失直接报错 */
+    private String requireData(JsonObject file, String label) {
+        if (file == null || !file.has("data") || file.get("data").isJsonNull()) {
+            throw new IllegalArgumentException(label + "不能为空");
+        }
+        return file.get("data").getAsString();
+    }
 
-        // 默认返回原类型（去除斜杠，避免路径错误）
-        return mimeToExt.getOrDefault(mimeType, mimeType.replace("/", ""));
+    /** 安全读取字符串字段，缺失返回 null */
+    private String stringField(JsonObject file, String name) {
+        if (file == null || !file.has(name) || file.get(name).isJsonNull()) {
+            return null;
+        }
+        return file.get(name).getAsString();
     }
 }

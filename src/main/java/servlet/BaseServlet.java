@@ -34,6 +34,9 @@ public class BaseServlet extends HttpServlet {
             "prepareMethodArguments", "handleException"
     ));
 
+    /** JSON 请求体上限：上传接口走 Base64 内嵌，允许较大，但不能无限制 */
+    private static final int MAX_JSON_BODY_CHARS = 64 * 1024 * 1024;
+
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         log.info("=== 收到GET请求 ===");
@@ -109,7 +112,13 @@ public class BaseServlet extends HttpServlet {
             StringBuilder buffer = new StringBuilder();
             BufferedReader reader = req.getReader();
             String line;
+            int totalChars = 0;
             while ((line = reader.readLine()) != null) {
+                totalChars += line.length();
+                if (totalChars > MAX_JSON_BODY_CHARS) {
+                    // 防止超大 JSON 直接把堆打满
+                    throw new IllegalArgumentException("请求体过大");
+                }
                 buffer.append(line);
             }
             String jsonStr = buffer.toString();
@@ -373,12 +382,17 @@ public class BaseServlet extends HttpServlet {
      * 发送成功响应
      */
     private void sendResponse(HttpServletResponse resp, Object result) throws IOException {
+        // 流式接口（HLS 等）会自行写响应，此时不能再改状态码或追加 JSON
+        if (resp.isCommitted()) {
+            return;
+        }
         if (result == null) {
             resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
             return;
         }
 
         String jsonResponse = GSON.toJson(result);
+        resp.setContentType("application/json;charset=UTF-8");
         PrintWriter out = resp.getWriter();
         out.print(jsonResponse);
         out.flush();
@@ -388,6 +402,9 @@ public class BaseServlet extends HttpServlet {
      * 发送错误响应
      */
     private void sendErrorResponse(HttpServletResponse resp, String message, int statusCode) throws IOException {
+        if (resp.isCommitted()) {
+            return;
+        }
         resp.setStatus(statusCode);
         JsonObject errorResponse = new JsonObject();
         errorResponse.addProperty("error", true);
