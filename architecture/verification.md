@@ -20,7 +20,7 @@
 
 `git diff --check` 通过；`v1.0.0` 标签仍指向原冻结提交。本轮不执行数据库升级、不删除媒体、不推送、不发布。
 
-## 未验证项
+## 首阶段未验证项
 
 没有运行真实 MySQL、Tomcat、浏览器、FFmpeg、外部 SMTP 或识曲服务；没有完成播放器端到端，也没有完成 Vue/Boot 新入口。H2 不覆盖 MySQL 字符集、执行计划、锁竞争、现网表差异。HLS 可靠性及黑名单持久化的限制见 [迁移方案](migration.md)。
 
@@ -31,3 +31,18 @@
 按引用检查删除过时的 CLAUDE.md、没有构建入口的旧 npm 清单，以及 temp/、后台测试页、WEB-INF 旧页面副本、b.html 反馈副本、支付测试页、DASH 实验页和默认 Hello World JSP。旧 npm 依赖目录与临时验证日志也已清理。同步移除失效的公开页面白名单项，修正 README 目录结构。
 
 业务入口、媒体/歌词/图片、数据库脚本、配置模板、回归测试与迁移资料保留；历史源码仍可通过 v1.0.0 获取。清理后重新执行构建与10项回归，并检查 WAR 不再打包上述原型。
+
+
+## 第二阶段：收藏事务与媒体任务（2026-11-16）
+
+本轮新增8项 H2/Servlet/FFmpeg 回归及1项真实 MySQL 回归，连同原10项，共19项全部通过；WAR检查仍不包含私人配置、H2或测试类。
+
+- `mvn -o -Pmedia-regression clean verify`：18项通过，包含实际FFmpeg生成的1秒短音频、55秒且超过50片的长音频、AES加密解码、同歌Future去重、失败传播和重试、旧文件保留、原生HLS清单子请求URL与16字节密钥响应。
+- `python scripts/run-isolated-mysql.py`：另1项 MySQL 8.0.41 回归通过；以全新临时数据目录和随机本地端口启动实例，24次并发收藏/取消均保持一条或零条记录及一致计数，计数写入失败时插入回滚。随后在隔离库连续执行两次增量索引脚本并验证唯一索引存在。没有连接现有数据库。
+- 默认 `mvn clean verify` 排除需要外部二进制的 IntegrationTest；媒体测试启用上面的 profile，FFmpeg须在PATH，或通过 `-Dffmpeg.test.path=…` 指定。MySQL脚本需 mysql/mysqld/mysqladmin 在同一目录，自动从PATH发现，也可用环境变量 MYSQL_TEST_BIN 指定。脚本只创建新库，不DROP/TRUNCATE现存表；临时实例通过mysqladmin正常关闭，测试数据保留在target供检查。
+
+验证中发现Windows的mysqld可能由父进程监管子进程，直接terminate父进程不能释放全部文件；已修正为正常关闭实例并等待监管进程退出。最终重新执行 clean verify 与隔离脚本均成功。生产迁移脚本尚未执行；需暂停收藏写入、先审查重复记录与计数偏差，再执行002。旧001脚本会删除重复评论点赞，不应因本次升级自动执行。
+
+尚未完成真实浏览器端到端。新的HLS任务仅在单实例内协调；旧版本切片不自动回收；播放首次触发转换并等待完整VOD，因此大文件首次等待可能超过旧播放器30秒轮询上限。上传独立存储、上传完成预处理、Boot运行框架和Vue应用外壳仍是后续工作。
+
+VOD参数参考 [FFmpeg官方HLS文档](https://ffmpeg.org/ffmpeg-formats.html#hls-2)；具体行为以本轮实际转换/解码回归为依据。

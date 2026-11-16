@@ -1462,6 +1462,10 @@
                     url: `/hls?action=checkStatus&songId=${targetSongId}`
                 });
 
+                if (status.data?.state === 'FAILED') {
+                    throw new Error(status.data.message || '音乐转换失败，请重试');
+                }
+
                 if (status.data?.ready) {
                     isReady = true;
                     break;

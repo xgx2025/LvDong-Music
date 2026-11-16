@@ -30,12 +30,6 @@ public class HlsStreamingServlet extends BaseServlet {
     private String hlsRootDir; // HLS文件存储根目录
 
     MusicService musicService = new MusicServiceImpl();
-    // 使用线程池管理异步任务
-    private final ExecutorService taskExecutor = Executors.newCachedThreadPool();
-    // 使用ConcurrentMap管理监控任务
-   // private final ConcurrentMap<String, Future<?>> monitoringTasks = new ConcurrentHashMap<>();
-
-
     @Override
     public void init() throws ServletException {
         super.init();
@@ -64,9 +58,7 @@ public class HlsStreamingServlet extends BaseServlet {
 
     @Override
     public void destroy() {
-        // 关闭时清理所有资源
-        taskExecutor.shutdownNow();
-     //   monitoringTasks.values().forEach(task -> task.cancel(true));
+        if (hlsProcessor != null) hlsProcessor.shutdown();
         super.destroy();
     }
 
@@ -76,90 +68,17 @@ public class HlsStreamingServlet extends BaseServlet {
      * 调用示例: /hls?action=processMp3&songId=123
      */
     public Object processMp3(@ParamName("songId") String songId) {
-        log.info("处理HLS切片: songId={}", songId);
-        String sourcePath = musicService.getMusicPath(Long.parseLong(songId));
-        log.debug("音乐文件路径: {}", sourcePath);
-        //查询数据库得到sourcePath
-        if (sourcePath == null || !new File(sourcePath).exists()) {
-            throw new IllegalArgumentException("歌曲文件不存在");
+        if (songId == null || (!songId.matches("[0-9]{1,19}") || new java.math.BigInteger(songId).bitLength() > 63)) throw new IllegalArgumentException("非法歌曲ID");
+        String sourcePath = musicService.getMusicPath(Long.valueOf(songId));
+        if (sourcePath == null || !Files.isRegularFile(Path.of(sourcePath))) {
+            throw new IllegalArgumentException("歌曲文件不存在或未通过审核");
         }
-
-         Map<String,Object> map =(Map<String, Object>)checkStatus(songId);
-         boolean flag = (boolean)map.get("ready");
+        hlsProcessor.convertToHls(sourcePath, Path.of(hlsRootDir, songId).toString(), 10, 0, songId);
         JsonObject result = new JsonObject();
-         if (flag) {
-             result.addProperty("success", true);
-             result.addProperty("message", "HLS切片已存在");
-             result.addProperty("hlsUrl", "hls?action=serveHls&songId=" + songId + "&fileName=index.m3u8");
-             return result;
-         }
-        // 参数校验
-        if (songId == null) {
-            throw new IllegalArgumentException("缺少必要参数: songId");
-        }
-
-        // 设置默认值
-        int segDuration =  10; // 默认10秒切片
-        int listSize =  50; // 默认保留40个切片
-
-        // 为每个歌曲创建独立目录，避免文件冲突
-        String outputDir = hlsRootDir + File.separator + songId;
-        try {
-            Files.createDirectories(Paths.get(outputDir));
-        } catch (IOException e) {
-            throw new RuntimeException("无法创建输出目录", e);
-        }
-
-        log.info("------------------------- 开始HLS切片处理");
-        try {
-            // 启动异步切片任务
-            CompletableFuture<Void> conversionTask = hlsProcessor.convertToHls(
-                    sourcePath,
-                    outputDir,
-                    segDuration,
-                    listSize,
-                    songId
-            ).exceptionally(e -> {
-                log.error("HLS转换失败: {}", e.getMessage(), e);
-                return null;
-            });
-
-            // 启动切片监控任务（自动清理旧切片）
-//            CompletableFuture<Void> monitorTask = hlsProcessor.monitorHlsDirectory(
-//                    outputDir,
-//                    50, // 最多保留50个切片
-//                    60000 // 每分钟检查一次
-//            ).exceptionally(e -> {
-//                System.err.println("监控任务异常: " + e.getMessage());
-//                return null;
-//            });
-
-
-            // 保存监控任务以便后续管理
-//            monitoringTasks.put(songId, monitorTask);
-
-            // 任务完成后处理
-            conversionTask.thenRun(() -> {
-                log.info("歌曲[{}]HLS切片完成", songId);
-                // 从活动任务列表中移除
-               // monitoringTasks.remove(songId);
-                // 可以在这里添加通知逻辑，如更新数据库状态等
-            }).exceptionally(ex -> {
-                log.error("歌曲[{}]HLS切片失败: {}", songId, ex.getMessage(), ex);
-                // 从活动任务列表中移除
-              //  monitoringTasks.remove(songId);
-                return null;
-            });
-
-            // 返回处理状态
-            result.addProperty("success", true);
-            result.addProperty("message", "正在处理HLS切片");
-            result.addProperty("hlsUrl", "hls?action=serveHls&songId=" + songId + "&fileName=index.m3u8");
-            return result;
-
-        } catch (Exception e) {
-            throw new RuntimeException("HLS切片处理失败: " + e.getMessage(), e);
-        }
+        result.addProperty("success", true);
+        result.addProperty("message", "媒体任务已接收");
+        result.addProperty("hlsUrl", "hls?action=serveHls&songId=" + songId + "&fileName=index.m3u8");
+        return result;
     }
 
     /**
@@ -181,8 +100,9 @@ public class HlsStreamingServlet extends BaseServlet {
         }
 
         // 2. 参数白名单校验，避免把任意路径拼进文件系统
-        if (songId == null || !songId.matches("\\d{1,20}")
-                || fileName == null || !fileName.matches("[A-Za-z0-9_-]{1,64}\\.(m3u8|ts)")) {
+        if (songId == null || (!songId.matches("[0-9]{1,19}") || new java.math.BigInteger(songId).bitLength() > 63)
+                || fileName == null || !(fileName.equals("index.m3u8") || fileName.matches("[A-Za-z0-9_-]{1,64}\\.ts")
+                    || fileName.matches("key-[a-f0-9]{32}\\.key") || fileName.equals("encryption.key"))) {
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, "非法请求参数");
             return;
         }
@@ -214,18 +134,35 @@ public class HlsStreamingServlet extends BaseServlet {
         if (isPlaylist) {
             response.setContentType("application/vnd.apple.mpegurl");
             response.setHeader("Cache-Control", "no-store");
-            response.setContentLengthLong(length);
-            try (InputStream in = new FileInputStream(tsFile);
-                 OutputStream out = response.getOutputStream()) {
-                in.transferTo(out);
+            // Rewrite all child requests through the authenticated servlet (including native HLS).
+            String token = request.getParameter("token");
+            String suffix = "&stream=1" + (token == null ? "" : "&token=" + java.net.URLEncoder.encode(token, java.nio.charset.StandardCharsets.UTF_8));
+            String prefix = "hls?action=serveHls&songId=" + songId + "&fileName=";
+            StringBuilder manifest = new StringBuilder();
+            for (String line : Files.readAllLines(tsPath)) {
+                if (line.matches("[A-Za-z0-9_-]{1,64}\\.ts")) line = prefix + line + suffix;
+                else if (line.startsWith("#EXT-X-KEY:")) {
+                    line = line.replaceAll("URI=\"[^\"]*fileName=([A-Za-z0-9_-]+\\.key)\"", "URI=\"" + prefix + "$1" + java.util.regex.Matcher.quoteReplacement(suffix) + "\"");
+                }
+                manifest.append(line).append('\n');
             }
+            response.getWriter().write(manifest.toString());
+            return;
+        }
+
+        if (fileName.endsWith(".key")) {
+            response.setContentType("application/octet-stream");
+            response.setHeader("Cache-Control", "no-store");
+            if (length != 16) { response.sendError(404); return; }
+            response.setContentLengthLong(length);
+            response.getOutputStream().write(Files.readAllBytes(tsPath));
             return;
         }
 
         // 5. TS 分片支持 Range 请求
         response.setContentType("video/mp2t");
         response.setHeader("Accept-Ranges", "bytes");
-        response.setHeader("Cache-Control", "public, max-age=3600");
+        response.setHeader("Cache-Control", "private, no-store");
 
         long start = 0;
         long end = length - 1;
@@ -305,16 +242,14 @@ public class HlsStreamingServlet extends BaseServlet {
      * 检查HLS处理状态
      */
     public Object checkStatus(@ParamName("songId") String songId) {
-        String outputDir = hlsRootDir + File.separator + songId;
-        File m3u8File = new File(outputDir + File.separator + "index.m3u8");
-        // 检查前3个切片是否已生成（避免播放时早期切片缺失）
-        File ts0File = new File(outputDir + File.separator + "index0.ts");
-        File ts1File = new File(outputDir + File.separator + "index1.ts");
-
+        if (songId == null || (!songId.matches("[0-9]{1,19}") || new java.math.BigInteger(songId).bitLength() > 63)) throw new IllegalArgumentException("非法歌曲ID");
+        if (musicService.getMusicPath(Long.valueOf(songId)) == null) throw new IllegalArgumentException("歌曲不可播放");
+        Path output = Path.of(hlsRootDir, songId);
+        HlsProcessor.State state = hlsProcessor.state(output);
         Map<String, Object> result = new HashMap<>();
-        // 必须同时满足：m3u8存在 + 前2个切片存在
-        result.put("ready", m3u8File.exists() && m3u8File.length() > 0
-                && ts0File.exists() && ts1File.exists());
+        result.put("ready", state == HlsProcessor.State.READY);
+        result.put("state", state == null ? "NOT_REQUESTED" : state.name());
+        if (state == HlsProcessor.State.FAILED) result.put("message", "媒体转换失败，请重试");
         return result;
     }
 }

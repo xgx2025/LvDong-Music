@@ -8,7 +8,7 @@
 
 历史学习版本见 [v1.0.0](https://github.com/xgx2025/LvDong-Music/releases/tag/v1.0.0)。当前升级先建立 Servlet 业务回归基线，再渐进迁移到 Vue 3 + TypeScript 与 Spring Boot 分层单体。
 
-查看[迁移阶段与验收标准](architecture/migration.md)、[接口兼容契约](architecture/api-contract.md)和[首阶段验证记录](architecture/verification.md)。新前端与 Boot 运行入口尚未交付；页面中的推荐、歌单和 AI 演示不代表已有完整后端功能。
+查看[迁移阶段与验收标准](architecture/migration.md)、[接口兼容契约](architecture/api-contract.md)和[首阶段验证记录](architecture/verification.md)。已交付收藏事务与HLS任务可靠性改造（含隔离MySQL和实际FFmpeg回归）。新前端与 Boot 运行入口尚未交付；页面中的推荐、歌单和 AI 演示不代表已有完整后端功能。
 
 旧截图链接已失效，暂移除引用。后续经验证的公开截图统一放在 `assets/screenshots/` 并使用仓库相对链接。
 

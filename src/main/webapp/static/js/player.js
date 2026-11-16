@@ -165,6 +165,10 @@ async function loadHlsMusic(songId) {
                 url: `/hls?action=checkStatus&songId=${songId}`
             });
 
+            if (status.data?.state === 'FAILED') {
+                throw new Error(status.data.message || '音乐转换失败，请重试');
+            }
+
             if (status.data?.ready) {
                 console.log('准备好了！！！')
                 isReady = true;
