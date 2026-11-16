@@ -20,8 +20,8 @@ import java.util.Set;
 public class TokenFilter implements Filter {
 
     Set<String> publicHtmlPaths = new HashSet<>(Arrays.asList(
-            "/login.html", "/register.html", "/password-reset.html","/index.html","/home.html","/user-profile.html","/a.html","/x.html",
-            "/test3.html","/test4.html","/player.html","/search.html","/upload-music.html","/评论2.html","/评论.html","/comment.html",
+            "/login.html", "/register.html", "/password-reset.html","/index.html","/home.html","/user-profile.html",
+            "/player.html","/search.html","/upload-music.html","/comment.html",
             "/humming-recognition.html","/feedback.html","/ai-assistant.html","/qqLogin.html"
     ));
 

@@ -71,7 +71,8 @@ ListenToMusic
 │   ├── sql/lvdong_music_db.sql          数据库建表脚本
 │   └── logback.xml
 ├── src/main/webapp                      页面与静态资源
-├── doc/                                 项目文档与界面截图
+├── src/test                             隔离数据库与 Servlet 业务回归
+├── architecture/                        迁移方案、接口契约与验证记录
 └── pom.xml
 ```
 
