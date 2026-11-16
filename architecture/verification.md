@@ -1,5 +1,22 @@
 # 首阶段验证记录
 
+## Vue公共外壳切片（2026-11-16）
+
+新增独立 `frontend/`，本轮使用 Node24.19.0/npm11.17.0，依赖版本锁定于 package-lock.json。
+
+| 验证 | 本轮结果 |
+| --- | --- |
+| `cd frontend` 后 `npm test` | 10项通过：请求错误分类、字符串ID、取消、单Audio/队列、快速切歌竞态、结束推进/移除、seek/volume边界、旧媒体context、超过30秒排队及FAILED |
+| `npm run build` | vue-tsc类型检查与Vite生产构建通过；主JS约120KB，HLS延迟chunk约578KB仍有体积提示 |
+| `python tests/run_browser.py` | Chromium真实播放生成的45秒WAV；切换3个路由Audio对象相同，loadstart次数维持1；暂停恢复、键盘进度、展开收起、队列、HTTP500重试、空态、390px无横向溢出及减少动效；页面脚本错误0 |
+| `python tests/run_browser.py --h2-jar <测试H2-JAR>` | 启动打包Boot JAR，显式指定全新内存H2与最小夹具；实际Vite代理/API/页面链路、歌手搜索、审核过滤和队列通过，结束关闭Boot/Vite |
+
+隔离WAV与搜索夹具仅在测试脚本中，不作为产品数据或可公开播放音源。浏览器截图/日志/SQL夹具位于被忽略的 `frontend/test-results/`，构建产物也被忽略。真实Boot链路没有使用既有数据库，没有执行生产DDL或读取私人配置。
+
+首次沙箱本地服务无法启动，经权限流程执行；Python Playwright期望的Chromium版本未安装，使用显式环境变量选择本机现有Chromium完成验证。浏览器测试入口支持标准Playwright安装或自定义可执行路径。
+
+本轮未验收真实旧站HLS鉴权（含清单、密钥、切片）、Safari原生HLS、跨域生产部署、真实手机性能、账号登录/评论/收藏/个人中心。CSS唱片与占位为原创，没有新增第三方图片字体。旧WAR及Boot业务实现未修改，历史后端31项执行记录见下文，不把历史结果当成本轮重跑。
+
 执行环境：2026-11-16，Java 21.0.9 / Maven 3.9.10，分支 `xgx-dev`。现有 Servlet/WAR 仍按 Java 16 目标编译。
 
 ## 自动化验证

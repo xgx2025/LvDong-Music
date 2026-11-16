@@ -45,6 +45,10 @@ src/main/resources/application.properties
 
 ### 运行与依赖产物 ###
 node_modules/
+frontend/dist/
+frontend/test-results/
+frontend/.env.local
+frontend/.env.*.local
 logs/
 *.log
 __pycache__/

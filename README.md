@@ -8,7 +8,7 @@
 
 历史学习版本见 [v1.0.0](https://github.com/xgx2025/LvDong-Music/releases/tag/v1.0.0)。当前升级先建立 Servlet 业务回归基线，再渐进迁移到 Vue 3 + TypeScript 与 Spring Boot 分层单体。
 
-查看[迁移阶段与验收标准](architecture/migration.md)、[接口兼容契约](architecture/api-contract.md)和[首阶段验证记录](architecture/verification.md)。已交付收藏事务与HLS任务可靠性改造（含隔离MySQL和实际FFmpeg回归）。已新增 [Java 21 / Boot 4.1.2 独立后端](backend/README.md)，提供公开搜索新 API 与旧 JSON 搜索适配，并保留根目录 WAR 构建。Vue 新前端尚未交付；页面中的推荐、歌单和 AI 演示不代表已有完整后端功能。
+查看[迁移阶段与验收标准](architecture/migration.md)、[接口兼容契约](architecture/api-contract.md)和[首阶段验证记录](architecture/verification.md)。已交付收藏事务与HLS任务可靠性改造（含隔离MySQL和实际FFmpeg回归）。已新增 [Java 21 / Boot 4.1.2 独立后端](backend/README.md)，提供公开搜索新 API 与旧 JSON 搜索适配，并保留根目录 WAR 构建。已新增 [Vue 3 独立前端](frontend/README.md)，交付公开搜索、播放队列与常驻播放器基础；旧鉴权媒体通过显式配置适配，尚未完成真实站点播放验收。旧页面中的推荐、歌单和 AI 演示不代表已有完整后端功能。
 
 旧截图链接已失效，暂移除引用。后续经验证的公开截图统一放在 `assets/screenshots/` 并使用仓库相对链接。
 
@@ -72,6 +72,7 @@ ListenToMusic
 │   └── logback.xml
 ├── src/main/webapp                      页面与静态资源
 ├── src/test                             隔离数据库与 Servlet 业务回归
+├── frontend/                            Vue/TS 应用外壳、搜索、队列、常驻播放器及隔离回归
 ├── backend/                             独立 Boot JAR、公开搜索及 HTTP 集成回归
 ├── architecture/                        迁移方案、接口契约与验证记录
 └── pom.xml
