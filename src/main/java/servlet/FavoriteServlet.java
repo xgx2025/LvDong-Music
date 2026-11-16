@@ -19,6 +19,29 @@ public class FavoriteServlet extends BaseServlet{
 
     FavoriteService favoriteService = new FavoriteServiceImpl();
 
+    /** Caller identity always comes from the validated token, never userId input. */
+    protected Object getFavorites(@ParamName("accessToken") String accessToken,
+                                  @ParamName("page") int page, @ParamName("size") int size) {
+        Claims claims = JwtTokenUtil.getClaimsFromToken(accessToken, JwtTokenUtil.ACCESS_TOKEN_SECRET);
+        Long userId = Long.valueOf(String.valueOf(claims.get("id")));
+        return Map.of("success", true, "favorites", favoriteService.getFavorites(userId,
+                utils.PaginationUtil.page(page), utils.PaginationUtil.size(size)));
+    }
+
+    protected Object getStates(@ParamName("accessToken") String accessToken, @ParamName("songIds") String songIds) {
+        if (songIds == null || songIds.length() > 2100 || !songIds.matches("\\d+(,\\d+){0,99}"))
+            return Map.of("success", false, "message", "歌曲ID列表无效");
+        Claims claims = JwtTokenUtil.getClaimsFromToken(accessToken, JwtTokenUtil.ACCESS_TOKEN_SECRET);
+        Long userId = Long.valueOf(String.valueOf(claims.get("id")));
+        java.util.List<Long> ids;
+        try {
+            ids = java.util.Arrays.stream(songIds.split(",")).map(Long::valueOf).collect(java.util.stream.Collectors.toList());
+        } catch (NumberFormatException invalidId) {
+            return Map.of("success", false, "message", "歌曲ID列表无效");
+        }
+        return Map.of("success", true, "states", favoriteService.getStates(userId, ids));
+    }
+
     protected Map<String, Object> addFavorite(@ParamName("accessToken") String accessToken, @ParamName("songId")String songId) throws ServletException, IOException {
         Claims claims = JwtTokenUtil.getClaimsFromToken(accessToken,JwtTokenUtil.ACCESS_TOKEN_SECRET);
         String userId = (String)claims.get("id");

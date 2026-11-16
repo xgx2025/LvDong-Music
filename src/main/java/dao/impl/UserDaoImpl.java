@@ -132,6 +132,29 @@ public class UserDaoImpl implements UserDao {
     }
 
     @Override
+    public User findProfileById(Long id) {
+        String sql = "SELECT id, username, email, avatar, gender, bio, created_at FROM users WHERE id = ?";
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, id);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (!rs.next()) return null;
+                User user = new User();
+                user.setId(rs.getLong("id"));
+                user.setUsername(rs.getString("username"));
+                user.setEmail(rs.getString("email"));
+                user.setAvatar(rs.getString("avatar"));
+                user.setGender(rs.getString("gender"));
+                user.setBio(rs.getString("bio"));
+                user.setRegisterTime(rs.getString("created_at"));
+                return user;
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("查询个人资料失败", e);
+        }
+    }
+
+    @Override
     public User findByEmail(String email) {
         String sql = "SELECT * FROM users WHERE email = ?";
         try (Connection conn = DatabaseUtil.getConnection();

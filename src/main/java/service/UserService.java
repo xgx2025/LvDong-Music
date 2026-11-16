@@ -3,6 +3,7 @@ package service;
 import pojo.User;
 
 public interface UserService {
+    User getProfile(Long id);
 
     /**
      * 注册用户

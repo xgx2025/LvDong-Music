@@ -59,8 +59,10 @@ public class SingerServlet extends BaseServlet{
             int status = singerService.getStatus(singerId);
             if(status==0) {
                 result.put("status", "pending");
-            }else{
+            }else if (status == 1){
                 result.put("status", "approved");
+            }else{
+                result.put("status", "rejected");
             }
         } catch (RuntimeException e) {
             result.put("status", "normal");

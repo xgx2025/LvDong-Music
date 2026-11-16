@@ -20,6 +20,16 @@ public class SearchServlet extends BaseServlet{
 
     SearchService searchService = new SearchServiceImpl();
 
+    protected Object getSong(@ParamName("songId") String songId) {
+        if (songId == null || !songId.matches("[0-9]{1,19}"))
+            return Map.of("success", false, "message", "歌曲ID无效");
+        Song song;
+        try { song = searchService.getSong(Long.valueOf(songId)); }
+        catch (NumberFormatException e) { return Map.of("success", false, "message", "歌曲ID无效"); }
+        if (song == null) return Map.of("success", false, "message", "歌曲不存在或尚未发布");
+        return Map.of("success", true, "song", song);
+    }
+
     protected Object search(@ParamName("accessToken") String accessToken,@ParamName("keyword") String keyword,@ParamName("page")int page,@ParamName("pageSize")int pageSize) throws ServletException, IOException {
         Map<String,Object> result = new HashMap<>();
         // 分页参数钳制：避免 pageSize 被任意放大导致大查询

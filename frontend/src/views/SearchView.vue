@@ -5,6 +5,10 @@ import { search } from "../api/search";
 import type { SearchResult, Song } from "../types";
 import { usePlayerStore } from "../stores/player";
 import CoverArt from "../components/CoverArt.vue";
+import FavoriteButton from "../components/FavoriteButton.vue";
+import { useFavoritesStore } from "../stores/favorites";
+import { useSessionStore } from "../stores/session";
+const favorites = useFavoritesStore(), session = useSessionStore();
 const route = useRoute(),
   router = useRouter(),
   player = usePlayerStore();
@@ -47,39 +51,31 @@ function add(song: Song) {
   notice.value = `已加入队列：${song.songName || "未命名歌曲"}`;
 }
 watch(() => route.fullPath, load, { immediate: true });
+watch(() => [result.value, session.authenticated], () => {
+  if (result.value) void favorites.load(result.value.songs.map(song => song.songId)).catch(() => {});
+});
 onBeforeUnmount(() => request?.abort());
 </script>
 <template>
-  <section class="hero">
-    <div class="hero-copy">
-      <p class="eyebrow">YOUR DAILY SOUNDTRACK</p>
-      <h1>此刻，<br />让旋律接管。</h1>
-      <p class="hero-description">
-        熟悉的旋律，未曾听见的声音。<br />在这里，找到属于你的下一首。
-      </p>
-      <a class="light-button" href="#search">寻找一首歌</a>
-    </div>
-    <div class="record-scene" aria-hidden="true">
-      <div class="record-sleeve">
-        <span>律动<br /><em>日常的回响</em></span
-        ><small>SIDE A / EVERYDAY SOUNDS</small>
+  <template v-if="!route.query.q">
+    <section class="welcome">
+      <h1>嗨，<span>音乐爱好者</span></h1>
+      <p>今日为你推荐这些好音乐</p>
+    </section>
+    <section class="home-banner">
+      <img src="https://picsum.photos/1200/400?random=1" alt="热门推荐" />
+      <div class="banner-copy">
+        <span>精选歌单</span>
+        <h2>夏日限定 · 清凉节奏</h2>
+        <p>32首适合夏日聆听的轻快旋律，陪你度过炎热午后</p>
       </div>
-      <div class="vinyl">
-        <div class="vinyl-label">律动<span>33⅓ RPM</span></div>
-      </div>
-      <span class="scene-caption"
-        >A LITTLE MUSIC. A LITTLE ROOM TO BREATHE.</span
-      >
-    </div>
-  </section>
+    </section>
+  </template>
   <section id="search" class="search-section">
     <div class="section-heading">
-      <div>
-        <p class="eyebrow">DISCOVER</p>
-        <h2>发现好声音<span class="heading-dot">.</span></h2>
-      </div>
-      <span class="subtle">公开曲库 · 歌曲与歌手</span>
+      <h2>{{ route.query.q ? '搜索结果' : '最新歌曲' }}</h2>
     </div>
+    <Teleport to="#header-search">
     <form class="search-form" @submit.prevent="submit">
       <label for="keyword" class="sr-only">歌曲、歌手或专辑关键词</label
       ><input
@@ -90,10 +86,9 @@ onBeforeUnmount(() => request?.abort());
         type="search"
       /><button class="primary" type="submit">搜索音乐</button>
     </form>
+    </Teleport>
     <div class="results-heading">
-      <span>{{
-        route.query.q ? `“${route.query.q}” 的搜索结果` : "已发布歌曲"
-      }}</span
+      <span>{{ route.query.q ? `“${route.query.q}” 的搜索结果` : "已发布歌曲" }}</span
       ><span v-if="result">{{ result.songCount }} 首歌曲</span>
     </div>
     <p v-if="notice" class="notice" role="status">{{ notice }}</p>
@@ -128,7 +123,7 @@ onBeforeUnmount(() => request?.abort());
           }}</span
           ><CoverArt :path="song.coverUrl" :name="song.songName" />
           <div class="song-title">
-            <strong>{{ song.songName || "未命名歌曲" }}</strong
+            <RouterLink :to="`/song/${song.songId}`"><strong>{{ song.songName || "未命名歌曲" }}</strong></RouterLink
             ><small>{{
               song.singers.map((s) => s.name || "未知歌手").join(" / ") ||
               "未知歌手"
@@ -148,6 +143,7 @@ onBeforeUnmount(() => request?.abort());
             >
               加入
             </button>
+            <FavoriteButton :song-id="song.songId" />
           </div>
         </article>
       </div>

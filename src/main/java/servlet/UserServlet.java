@@ -26,6 +26,28 @@ public class UserServlet extends BaseServlet{
 
     private UserService userService = new UserServiceImpl();
 
+    /** Returns only the authenticated caller's public profile fields. */
+    protected Object getProfile(@ParamName("accessToken") String accessToken) {
+        Claims claims = JwtTokenUtil.getClaimsFromToken(accessToken, JwtTokenUtil.ACCESS_TOKEN_SECRET);
+        User user = userService.getProfile(Long.valueOf(String.valueOf(claims.get("id"))));
+        JsonObject response = new JsonObject();
+        response.addProperty("success", user != null);
+        if (user == null) {
+            response.addProperty("message", "账号不存在，请重新登录");
+            return response;
+        }
+        JsonObject profile = new JsonObject();
+        profile.addProperty("id", String.valueOf(user.getId()));
+        profile.addProperty("username", user.getUsername());
+        profile.addProperty("email", user.getEmail());
+        profile.addProperty("avatar", user.getAvatar());
+        profile.addProperty("gender", user.getGender());
+        profile.addProperty("bio", user.getBio());
+        profile.addProperty("registerTime", user.getRegisterTime());
+        response.add("user", profile);
+        return response;
+    }
+
     /**
      * 用户登录
      * @param email

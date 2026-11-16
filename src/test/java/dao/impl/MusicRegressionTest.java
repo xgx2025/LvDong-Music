@@ -58,6 +58,23 @@ public class MusicRegressionTest extends TestCase {
         assertEquals("2", dao.searchSongsByKeyword("match", 2, 1, null).get(0).getSongId());
     }
 
+    public void testFavoriteListIsCallerScopedAndExcludesUnpublishedSongs() throws Exception {
+        try (Connection conn = DatabaseUtil.getConnection(); Statement sql = conn.createStatement()) {
+            sql.execute("CREATE TABLE song_likes (song_id BIGINT, user_id BIGINT, created_at TIMESTAMP)");
+            sql.execute("INSERT INTO song_likes(song_id,user_id) VALUES (1,10),(3,10),(2,20),(1,10)");
+        }
+        SongFavoriteDaoImpl favorites = new SongFavoriteDaoImpl();
+        assertEquals(1L, favorites.countFavorites(10L));
+        assertEquals("1", favorites.findFavorites(10L, 1, 20).get(0).getSongId());
+        assertEquals("2", favorites.findFavorites(20L, 1, 20).get(0).getSongId());
+        assertTrue(favorites.findFavorites(30L, 1, 20).isEmpty());
+        assertTrue(favorites.findFavorites(10L, 2, 20).isEmpty());
+        MusicDaoImpl music = new MusicDaoImpl();
+        assertNull(music.findPublishedSong(3L));
+        assertNull(music.findPublishedSong(4L));
+        assertEquals("1", music.findPublishedSong(1L).getSongId());
+    }
+
     public void testAssociationDoesNotCommitServiceTransaction() throws Exception {
         Singer singer = new Singer();
         singer.setId("99");

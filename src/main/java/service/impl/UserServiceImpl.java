@@ -21,6 +21,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class UserServiceImpl implements UserService {
+    @Override
+    public User getProfile(Long id) {
+        return userDao.findProfileById(id);
+    }
     private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
 
     private UserDao userDao = new UserDaoImpl();

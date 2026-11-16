@@ -23,6 +23,13 @@ public class SearchServiceImpl implements SearchService {
     SingerDao singerDao = new SingerDaoImpl();
     AlbumDao albumDao = new AlbumDaoImpl();
 
+    @Override
+    public Song getSong(Long id) {
+        Song song = musicDao.findPublishedSong(id);
+        if (song != null) song.setSingers(musicDao.getSingersBySongId(id));
+        return song;
+    }
+
 
     @Override
     public SearchResult comprehensiveSearch(String keyword, int page, int pageSize,String userId) {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { usePlayerStore } from "../stores/player";
 import CoverArt from "./CoverArt.vue";
+import LyricsPanel from "./LyricsPanel.vue";
 const p = usePlayerStore();
 const time = (value: number) =>
   `${Math.floor(value / 60)}:${Math.floor(value % 60)
@@ -23,7 +24,8 @@ const time = (value: number) =>
           "从搜索结果加入一首喜欢的歌"
         }}
       </p>
-      <p class="subtle">歌词同步将在媒体服务接入后继续迁移。</p>
+      <LyricsPanel :path="p.current?.lyricUrl" />
+      <RouterLink v-if="p.current" :to="`/song/${p.current.songId}`">查看歌曲与评论</RouterLink>
     </div>
     <div class="player-row">
       <button

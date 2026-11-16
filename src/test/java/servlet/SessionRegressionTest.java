@@ -17,6 +17,26 @@ import java.util.Map;
 
 /** Exercises actual BaseServlet JSON binding and refresh revocation. */
 public class SessionRegressionTest extends TestCase {
+    public void testProfileUsesTokenIdentityAndNeverSerializesPassword() throws Exception {
+        pojo.User profile = new pojo.User();
+        profile.setId(2001L); profile.setUsername("profile-user"); profile.setEmail("user@example.test");
+        profile.setPassword("must-never-be-returned");
+        service.UserService service = (service.UserService) Proxy.newProxyInstance(getClass().getClassLoader(),
+                new Class<?>[]{service.UserService.class}, (proxy, method, args) -> {
+                    assertEquals("getProfile", method.getName());
+                    assertEquals(2001L, args[0]);
+                    return profile;
+                });
+        UserServlet servlet = new UserServlet();
+        java.lang.reflect.Field field = UserServlet.class.getDeclaredField("userService");
+        field.setAccessible(true); field.set(servlet, service);
+        String access = JwtTokenUtil.generateAccessToken(new java.util.HashMap<>(Map.of("id", "2001")));
+        JsonObject response = (JsonObject) servlet.getProfile(access);
+        assertTrue(response.get("success").getAsBoolean());
+        assertEquals("2001", response.getAsJsonObject("user").get("id").getAsString());
+        assertFalse(response.toString().contains("password"));
+        assertFalse(response.toString().contains("must-never-be-returned"));
+    }
     public void testJsonLogoutRevokesRefreshAndAccessTokens() throws Exception {
         String access = JwtTokenUtil.generateAccessToken(new java.util.HashMap<>(Map.of("id", "1001")));
         String refresh = JwtTokenUtil.generateRefreshToken(new java.util.HashMap<>(Map.of("id", "1001")));

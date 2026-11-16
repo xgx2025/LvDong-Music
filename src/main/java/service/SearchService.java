@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public interface SearchService {
+    pojo.Song getSong(Long id);
 
     SearchResult comprehensiveSearch(String keyword, int page, int pageSize,String userId);
 

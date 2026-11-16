@@ -102,6 +102,7 @@ public class TokenFilter implements Filter {
     private boolean isExcludedRequest(HttpServletRequest request) {
         String path = request.getRequestURI().substring(request.getContextPath().length());
         String action = request.getParameter("action");
+        if ("/searchServlet".equals(path) && "getSong".equals(action)) return true;
 
         boolean isWebSocketHandshake = path.equals("/websocket")
                 && "websocket".equalsIgnoreCase(request.getHeader("Upgrade"));

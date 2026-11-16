@@ -7,10 +7,10 @@
 | 模块 | 技术栈 | 当前能力 |
 | --- | --- | --- |
 | 旧站 `src/` | Java 16 编译目标、Servlet 3.1、JDBC、HikariCP、MySQL、Tomcat 9 | 用户体系、搜索、HLS 播放、收藏、评论、上传及音乐人申请等业务 |
-| [新前端](frontend/README.md) | Vue 3、TypeScript、Vite、Vue Router、Pinia、HLS.js | 公开搜索、分页、播放队列、常驻播放器及旧媒体适配 |
+| [新前端](frontend/README.md) | Vue 3、TypeScript、Vite、Vue Router、Pinia、HLS.js | 公开搜索、账号与个人中心、收藏、评论、上传、识曲、歌词与常驻播放器 |
 | [独立后端](backend/README.md) | Java 21、Spring Boot 4.1.2、JDBC | 匿名公开搜索 API 与旧 JSON 搜索兼容入口 |
 
-新前端和独立后端尚未覆盖全部旧站业务。新前端暂不提供账号登录、收藏写入、评论、个人中心及歌词同步；独立后端目前只提供公开搜索。旧页面中的推荐、歌单与 AI 演示不代表完整后端能力。
+新前端已接入主要旧站业务，其中账号、收藏、评论、上传、识曲和媒体继续调用 Servlet 服务；独立后端目前只提供公开搜索。推荐、歌单与 AI 演示不代表完整后端能力；反馈目前支持本机导出，第三方 OAuth 尚未接入。
 
 历史学习版本见 [v1.0.0](https://github.com/xgx2025/LvDong-Music/tree/v1.0.0)。
 

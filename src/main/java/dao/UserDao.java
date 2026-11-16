@@ -3,6 +3,7 @@ package dao;
 import pojo.User;
 
 public interface UserDao {
+    User findProfileById(Long id);
 
     /**
      * 根据用户名查询用户ID

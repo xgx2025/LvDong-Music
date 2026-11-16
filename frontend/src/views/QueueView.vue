@@ -5,8 +5,6 @@ const player = usePlayerStore();
 </script>
 <template>
   <section class="inner-page">
-    <p class="eyebrow">UP NEXT</p>
-    <h1>把喜欢的，<br />留在下一首。</h1>
     <div class="section-heading">
       <h2>
         播放队列 <span class="count">{{ player.queue.length }}</span>

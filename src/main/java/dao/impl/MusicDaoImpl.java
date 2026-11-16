@@ -22,6 +22,27 @@ public class MusicDaoImpl implements MusicDao {
 
     SongFavoriteDao songFavoriteDao = new SongFavoriteDaoImpl();
 
+    @Override
+    public Song findPublishedSong(Long id) {
+        String sql = "SELECT id,name,duration,album_id,album_name,cover_url,lyric_url,favorite_count FROM songs WHERE id=? AND state=1";
+        try (Connection conn = DatabaseUtil.getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, id);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (!rs.next()) return null;
+                Song song = new Song();
+                song.setSongId(rs.getString("id"));
+                song.setSongName(rs.getString("name"));
+                song.setDuration(rs.getString("duration"));
+                song.setAlbumId(rs.getString("album_id"));
+                song.setAlbumName(rs.getString("album_name"));
+                song.setCoverUrl(rs.getString("cover_url"));
+                song.setLyricUrl(rs.getString("lyric_url"));
+                song.setFavoriteCount(rs.getInt("favorite_count"));
+                return song;
+            }
+        } catch (SQLException e) { throw new RuntimeException("查询歌曲失败", e); }
+    }
+
     public String findMusicPathById(Long id) {
         String sql="SELECT audio_url FROM songs WHERE id = ? AND state = 1";
         try (Connection conn = DatabaseUtil.getConnection();

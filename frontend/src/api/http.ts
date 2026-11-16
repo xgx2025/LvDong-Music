@@ -28,7 +28,7 @@ export async function jsonRequest<T>(
     throw new RequestError(
       "http",
       response.status === 401
-        ? "播放凭证已失效，请重新配置"
+        ? "登录凭证已失效，请重新登录"
         : `服务请求失败（${response.status}），请稍后重试`,
       response.status,
     );

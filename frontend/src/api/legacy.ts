@@ -1,6 +1,5 @@
 import { jsonRequest } from "./http";
-export const legacyBase = import.meta.env.VITE_LEGACY_BASE as
-  string | undefined;
+export const legacyBase = (import.meta.env.VITE_LEGACY_BASE || "/legacy/") as string;
 export function legacyUrl(path: string): string {
   if (!legacyBase)
     throw new Error("尚未配置旧媒体服务。可先加入队列，待媒体服务接入后播放。");

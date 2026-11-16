@@ -4,6 +4,7 @@ import type { Song } from "../types";
 import { AudioEngine } from "../player/engine";
 import { prepareLegacy, type MediaSource } from "../api/legacy";
 import { useSessionStore } from "./session";
+import { RequestError } from "../api/http";
 
 export const usePlayerStore = defineStore("player", () => {
   const engine = new AudioEngine();
@@ -20,10 +21,17 @@ export const usePlayerStore = defineStore("player", () => {
   let controller: AbortController | undefined;
   let loaded = false;
   // Isolated tests inject a resolver; the shipped UI only resolves authenticated legacy media.
-  let resolver = (song: Song, signal: AbortSignal): Promise<MediaSource> =>
-    prepareLegacy(song.songId, useSessionStore().mediaToken, signal, (text) => {
-      message.value = text;
-    });
+  let resolver = async (song: Song, signal: AbortSignal): Promise<MediaSource> => {
+    const session = useSessionStore(), version = session.revision;
+    const prepare = () => prepareLegacy(song.songId, session.mediaToken, signal, text => { message.value = text; });
+    try { return await prepare(); }
+    catch (error) {
+      if (!(error instanceof RequestError) || error.status !== 401 || !session.authenticated || signal.aborted) throw error;
+      await session.refresh();
+      if (version !== session.revision || signal.aborted) throw new Error("登录状态已改变");
+      return prepare();
+    }
+  };
   engine.audio.volume = volume.value;
   engine.audio.addEventListener("timeupdate", () => {
     position.value = engine.audio.currentTime;

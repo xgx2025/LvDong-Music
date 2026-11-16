@@ -22,8 +22,7 @@ function clear() {
 </script>
 <template>
   <section class="inner-page settings">
-    <p class="eyebrow">CONNECTIONS</p>
-    <h1>好音乐，<br />需要真实的连接。</h1>
+    <h1>连接设置</h1>
     <div class="settings-card">
       <span class="pill">已接入</span>
       <h2>公开曲库</h2>
@@ -37,6 +36,7 @@ function clear() {
         legacyBase ? "已配置地址 · 待播放校验" : "待配置"
       }}</span>
       <h2>旧站媒体连接</h2>
+      <p v-if="session.authenticated">已登录为 {{ session.user?.username }}，播放与账号操作使用同一旧站身份。<RouterLink to="/profile">查看个人中心</RouterLink></p>
       <p>
         播放仍由旧站的鉴权 HLS 服务提供。{{
           legacyBase
@@ -48,7 +48,7 @@ function clear() {
         凭证仅用于媒体请求，刷新页面即清除；不会导入旧站身份，不提供自动刷新。仅在可信设备和可信媒体地址下使用。原生
         HLS 会将凭证带入查询参数，服务端应使用 HTTPS 并避免记录凭证。
       </p>
-      <form @submit.prevent="save">
+      <form v-if="!session.authenticated" @submit.prevent="save">
         <label for="media-token">旧站 Access Token</label
         ><input
           id="media-token"
@@ -73,12 +73,12 @@ function clear() {
       <p v-if="saved" role="status" class="notice">{{ saved }}</p>
     </div>
     <div class="settings-card">
-      <h2>迁移中的功能</h2>
+      <h2>账号与页面</h2>
       <p>
-        账号登录、评论、收藏写入、个人中心和歌词同步尚未接入本应用。当前搜索为匿名查询，收藏状态不代表你的账号数据。
+        登录、注册、密码重置、个人资料、音乐人申请、上传、收藏、评论与歌词已接入。公开搜索保持匿名，个人收藏状态通过登录后的独立接口查询。
       </p>
       <p>
-        浏览器减少动态效果偏好会自动生效。队列和播放进度在切换页面时持续保留，刷新页面后重置。
+        浏览器减少动态效果偏好会自动生效。队列和播放进度在切换页面时持续保留，刷新页面后重置。勾选保持登录仅在当前标签页保存会话，关闭标签页后清除。AI助手为本地演示，反馈仅支持本机导出。
       </p>
     </div>
   </section>

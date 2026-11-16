@@ -7,6 +7,7 @@ import pojo.Song;
 import java.util.List;
 
 public interface MusicDao {
+    pojo.Song findPublishedSong(Long id);
     /**
      * 通过音乐ID查找音乐资源路径
      * @param id

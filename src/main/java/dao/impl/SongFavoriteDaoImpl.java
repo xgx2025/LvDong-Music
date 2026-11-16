@@ -11,6 +11,44 @@ import java.util.List;
 import java.util.Map;
 
 public class SongFavoriteDaoImpl implements SongFavoriteDao {
+    @Override
+    public List<pojo.Song> findFavorites(Long userId, int page, int size) {
+        String sql = "SELECT s.id,s.name,s.duration,s.album_id,s.album_name,s.cover_url,s.lyric_url,s.favorite_count "
+                + "FROM songs s WHERE s.state=1 AND EXISTS (SELECT 1 FROM song_likes l WHERE l.song_id=s.id AND l.user_id=?) "
+                + "ORDER BY s.id DESC LIMIT ? OFFSET ?";
+        List<pojo.Song> songs = new java.util.ArrayList<>();
+        try (Connection conn = DatabaseUtil.getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, userId);
+            stmt.setInt(2, size);
+            stmt.setLong(3, (long) (page - 1) * size);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    pojo.Song song = new pojo.Song();
+                    song.setSongId(rs.getString("id"));
+                    song.setSongName(rs.getString("name"));
+                    song.setDuration(rs.getString("duration"));
+                    song.setAlbumId(rs.getString("album_id"));
+                    song.setAlbumName(rs.getString("album_name"));
+                    song.setCoverUrl(rs.getString("cover_url"));
+                    song.setLyricUrl(rs.getString("lyric_url"));
+                    song.setFavoriteCount(rs.getInt("favorite_count"));
+                    song.setUserHasFavorite(true);
+                    songs.add(song);
+                }
+            }
+        } catch (SQLException e) { throw new RuntimeException("查询收藏失败", e); }
+        return songs;
+    }
+
+    @Override
+    public long countFavorites(Long userId) {
+        String sql = "SELECT COUNT(*) FROM songs s WHERE s.state=1 AND EXISTS "
+                + "(SELECT 1 FROM song_likes l WHERE l.song_id=s.id AND l.user_id=?)";
+        try (Connection conn = DatabaseUtil.getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, userId);
+            try (ResultSet rs = stmt.executeQuery()) { rs.next(); return rs.getLong(1); }
+        } catch (SQLException e) { throw new RuntimeException("查询收藏数量失败", e); }
+    }
     private static final Logger log = LoggerFactory.getLogger(SongFavoriteDaoImpl.class);
 
 
