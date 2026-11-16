@@ -52,6 +52,7 @@ logs/
 .idea/
 .claude/
 .workbuddy/
+/.planning/
 
 ### 个人文件 ###
 docs/
