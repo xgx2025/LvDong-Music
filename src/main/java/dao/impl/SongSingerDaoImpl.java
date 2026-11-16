@@ -21,46 +21,33 @@ public class SongSingerDaoImpl implements SongSingerDao {
         public boolean addSongSinger(Long songId, List<Singer> singers) {
             String sql = "INSERT INTO song_singer (song_id, singer_id, singer_name) VALUES (?, ?, ?)";
             Connection conn = null;
-            PreparedStatement stmt = null;
+            boolean ownsTransaction = false;
             try {
-                conn = DatabaseUtil.getCurrentConnection() != null ? DatabaseUtil.getCurrentConnection() : DatabaseUtil.getConnection();
-                stmt = conn.prepareStatement(sql);
-
-                conn.setAutoCommit(false);
-                boolean result = false;
-
-                for (Singer singer : singers) {
-                    stmt.setLong(1, songId);
-                    stmt.setLong(2, Long.parseLong(singer.getId()));
-                    stmt.setString(3, singer.getName());
-                    stmt.addBatch();
-                }
-
-                int[] affectedRows = stmt.executeBatch();
-                for (int rows : affectedRows) {
-                    if (rows <= 0) {
-                        conn.rollback();
-                        return false;
+                conn = DatabaseUtil.getWriteConnection();
+                ownsTransaction = DatabaseUtil.getCurrentConnection() == null;
+                if (ownsTransaction) conn.setAutoCommit(false);
+                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                    for (Singer singer : singers) {
+                        stmt.setLong(1, songId);
+                        stmt.setLong(2, Long.parseLong(singer.getId()));
+                        stmt.setString(3, singer.getName());
+                        stmt.addBatch();
+                    }
+                    for (int rows : stmt.executeBatch()) {
+                        if (rows == java.sql.Statement.EXECUTE_FAILED || rows == 0) {
+                            throw new SQLException("歌曲歌手关联批量写入失败");
+                        }
                     }
                 }
-
-                conn.commit();
-                result = true;
-                return result;
-
-            } catch (SQLException e) {
-                log.error("添加歌曲歌手关联失败: {}", e.getMessage(), e);
+                if (ownsTransaction) conn.commit();
+                return true;
+            } catch (Exception e) {
+                if (ownsTransaction && conn != null) {
+                    try { conn.rollback(); } catch (SQLException rollbackError) { e.addSuppressed(rollbackError); }
+                }
                 throw new RuntimeException("添加歌曲歌手关联失败", e);
             } finally {
-                // 只关闭PreparedStatement，不关闭Connection
-                if (stmt != null) {
-                    try {
-                        stmt.close();
-                    } catch (SQLException e) {
-                        log.error("关闭PreparedStatement失败", e);
-                    }
-                }
-                // 注意：不要关闭conn！连接由事务统一管理
+                DatabaseUtil.releaseIfNotManaged(conn);
             }
         }
 

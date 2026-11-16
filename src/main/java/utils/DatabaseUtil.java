@@ -18,7 +18,7 @@ public class DatabaseUtil {
         config.setJdbcUrl(ConfigUtil.get("DB_URL", "db.url"));
         config.setUsername(ConfigUtil.get("DB_USERNAME", "db.username"));
         config.setPassword(ConfigUtil.get("DB_PASSWORD", "db.password"));
-        config.setDriverClassName("com.mysql.cj.jdbc.Driver");
+        config.setDriverClassName(ConfigUtil.get("DB_DRIVER", "db.driver", "com.mysql.cj.jdbc.Driver"));
 
         // 连接池配置（根据业务调整）
         config.setMaximumPoolSize(10);       // 最大连接数

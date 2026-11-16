@@ -335,7 +335,7 @@ window.auth = {
     logout: async () => {
         try {
             // 1. 发送登出请求到后端（携带当前 accessToken 用于服务器验证）
-            const response = await axios.post('/userServlet?action=logout', null, {
+            const response = await axios.post('/userServlet?action=logout', { refreshToken: getRefreshToken() }, {
                 headers: { Authorization: `Bearer ${getAccessToken()}` },
                 // 即使请求失败（如网络错误），也继续执行后续清理逻辑
                 validateStatus: () => true  // 不拦截任何状态码，交由业务逻辑处理

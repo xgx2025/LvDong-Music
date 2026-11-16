@@ -4,19 +4,13 @@
 
 项目没有使用 Spring 等框架，Servlet → Service → DAO 三层手写实现，适合作为理解 JavaWeb 请求分发、原生 JDBC 与连接池、JWT 认证的实践参考。
 
-## 界面预览
+## 架构升级进展
 
-**首页**：渐变背景搭配推荐歌单卡片，底部为常驻播放栏，支持歌词、播放模式与音量控制。
+历史学习版本见 [v1.0.0](https://github.com/xgx2025/LvDong-Music/releases/tag/v1.0.0)。当前升级先建立 Servlet 业务回归基线，再渐进迁移到 Vue 3 + TypeScript 与 Spring Boot 分层单体。
 
-<img src="doc/screenshots/home.jpg" alt="首页" width="900">
+查看[迁移阶段与验收标准](architecture/migration.md)、[接口兼容契约](architecture/api-contract.md)和[首阶段验证记录](architecture/verification.md)。新前端与 Boot 运行入口尚未交付；页面中的推荐、歌单和 AI 演示不代表已有完整后端功能。
 
-**搜索结果**：按歌曲、专辑、歌手、歌单、MV 分类展示，列表含封面、专辑与时长，点击即刻播放。
-
-<img src="doc/screenshots/search.png" alt="搜索结果" width="900">
-
-**播放页**：全屏模糊封面背景，滚动歌词逐行高亮，支持评论与分享。
-
-<img src="doc/screenshots/player.jpg" alt="播放页" width="900">
+旧截图链接已失效，暂移除引用。后续经验证的公开截图统一放在 `assets/screenshots/` 并使用仓库相对链接。
 
 ## 功能特性
 
@@ -111,12 +105,12 @@ mysql -uroot -p lvdong_music_db < src/main/resources/sql/lvdong_music_db.sql
 cp src/main/resources/application.properties.example src/main/resources/application.properties
 ```
 
-按文件内注释填写数据库账号、JWT 密钥与存储路径。`application.properties` 已在 `.gitignore` 中，不会被提交。
+按文件内注释填写数据库账号、JWT 密钥与存储路径。`application.properties` 已被 Git 忽略，且默认不打入 WAR。部署使用环境变量，或设置 `APP_CONFIG_FILE` 指向外部配置文件；测试使用独立的内存数据库和合成配置。
 
 ### 3. 构建
 
 ```bash
-mvn clean package
+mvn clean verify
 ```
 
 生成 `target/ListenToMusic.war`。

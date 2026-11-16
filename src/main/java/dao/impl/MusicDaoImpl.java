@@ -23,7 +23,7 @@ public class MusicDaoImpl implements MusicDao {
     SongFavoriteDao songFavoriteDao = new SongFavoriteDaoImpl();
 
     public String findMusicPathById(Long id) {
-        String sql="SELECT audio_url FROM songs WHERE id = ?";
+        String sql="SELECT audio_url FROM songs WHERE id = ? AND state = 1";
         try (Connection conn = DatabaseUtil.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             log.debug("查询音乐路径中: id={}", id);
@@ -43,17 +43,13 @@ public class MusicDaoImpl implements MusicDao {
     public List<Song> searchSongsByKeyword(String keyword, int page, int pageSize,Long userId) {
         // 使用LinkedHashMap保证插入顺序，同时根据songId去重
         Map<String, Song> uniqueSongs = new LinkedHashMap<>();
-        String sql = "SELECT s.id, s.name, s.duration, s.album_id, s.album_name, s.cover_url,s.lyric_url,s.favorite_count,ss.singer_name " +
-                "FROM songs s " +
-                "JOIN song_singer ss ON s.id = ss.song_id " +
-                "WHERE s.name LIKE ? OR s.album_name LIKE ? OR ss.singer_name LIKE ? " +
-                "ORDER BY CASE " +
-                "  WHEN s.name = ? THEN 1 " +         // 歌曲名精确匹配
-                "  WHEN s.name LIKE ? THEN 2 " +      // 歌曲名前缀匹配
-                "  WHEN s.album_name = ? THEN 3 " +   // 专辑名精确匹配
-                "  WHEN ss.singer_name = ? THEN 4 " + // 歌手名精确匹配
-                "  ELSE 5 END " +
-                "LIMIT ? OFFSET ?";
+        String sql = "SELECT s.id, s.name, s.duration, s.album_id, s.album_name, s.cover_url, s.lyric_url, s.favorite_count " +
+                "FROM songs s WHERE s.state = 1 AND (s.name LIKE ? OR s.album_name LIKE ? " +
+                "OR EXISTS (SELECT 1 FROM song_singer ss WHERE ss.song_id = s.id AND ss.singer_name LIKE ?)) " +
+                "ORDER BY CASE WHEN s.name = ? THEN 1 WHEN s.name LIKE ? THEN 2 " +
+                "WHEN s.album_name = ? THEN 3 " +
+                "WHEN EXISTS (SELECT 1 FROM song_singer ss WHERE ss.song_id = s.id AND ss.singer_name = ?) THEN 4 " +
+                "ELSE 5 END, s.id LIMIT ? OFFSET ?";
 
         try (Connection conn = DatabaseUtil.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -65,7 +61,7 @@ public class MusicDaoImpl implements MusicDao {
             stmt.setString(5, keyword + "%");            // 歌曲名前缀匹配
             stmt.setString(6, keyword);
             stmt.setString(7, keyword);
-            // LIMIT直接使用pageSize，不需要扩大10倍（去重后可能不足，后续处理）
+            // EXISTS 保证一首歌曲一行，再按稳定顺序分页。
             stmt.setInt(8, pageSize);
             // OFFSET正确计算为(当前页-1)*页面大小
             stmt.setInt(9, (page - 1) * pageSize);
@@ -126,12 +122,9 @@ public class MusicDaoImpl implements MusicDao {
 
     @Override
     public int countSongsByKeyword(String keyword) {
-        String sql = "SELECT COUNT(DISTINCT s.id) " +
-                "FROM songs s " +
-                "JOIN song_singer ss ON s.id = ss.song_id " +
-                "WHERE s.name LIKE ? " +
-                "   OR s.album_name LIKE ? " +
-                "   OR ss.singer_name LIKE ?";
+        String sql = "SELECT COUNT(*) FROM songs s WHERE s.state = 1 AND (s.name LIKE ? " +
+                "OR s.album_name LIKE ? OR EXISTS (SELECT 1 FROM song_singer ss " +
+                "WHERE ss.song_id = s.id AND ss.singer_name LIKE ?))";
 
         try (Connection conn = DatabaseUtil.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -204,7 +197,9 @@ public class MusicDaoImpl implements MusicDao {
             log.error("ID格式错误: songId={} 或 albumId={}", song.getSongId(), song.getAlbumId(), e);
             throw new RuntimeException("ID格式错误", e);
         }
-        // 注意：不要关闭conn！连接由事务统一管理
+        finally {
+            DatabaseUtil.releaseIfNotManaged(conn);
+        }
     }
 
     @Override
@@ -220,7 +215,7 @@ public class MusicDaoImpl implements MusicDao {
                 "s.cover_url, s.lyric_url, s.audio_url, ss.singer_name " +
                 "FROM songs s " +
                 "JOIN song_singer ss ON s.id = ss.song_id " +
-                "WHERE ss.singer_name = ? AND s.name = ?";
+                "WHERE s.state = 1 AND ss.singer_name = ? AND s.name = ?";
 
         try (Connection conn = DatabaseUtil.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {

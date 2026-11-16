@@ -41,7 +41,7 @@ public class SearchServiceImpl implements SearchService {
 
         CompletableFuture<List<Playlist>> playlistsFuture = searchPlaylists(keyword, 1, 8);
         CompletableFuture<Integer> playlistCountFuture = CompletableFuture.supplyAsync(
-                () -> singerDao.countSingersByKeyword(keyword));
+                () -> musicDao.countPlaylistsByKeyword(keyword));
         // 等待所有查询完成
         CompletableFuture.allOf(
                 songsFuture, songCountFuture,
@@ -72,7 +72,7 @@ public class SearchServiceImpl implements SearchService {
     public CompletableFuture<List<Song>> searchSongs(String keyword, int page, int pageSize,String userId) {
         return CompletableFuture.supplyAsync(() -> {
             // 查询歌曲基本信息
-            List<Song> songs = musicDao.searchSongsByKeyword(keyword, page, pageSize,Long.parseLong(userId));
+            List<Song> songs = musicDao.searchSongsByKeyword(keyword, page, pageSize, userId == null || userId.isBlank() ? null : Long.valueOf(userId));
             log.debug("歌曲查询结果: {}", songs);
             // 为每首歌曲查询歌手信息
             songs.forEach(song -> {

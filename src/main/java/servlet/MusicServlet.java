@@ -16,6 +16,7 @@ public class MusicServlet extends BaseServlet{
     private static final Logger log = LoggerFactory.getLogger(MusicServlet.class);
 
     MusicService musicService = new MusicServiceImpl();
+    service.SingerService singerService = new service.impl.SingerServiceImpl();
 
     protected Object upload(
             @ParamName("accessToken") String accessToken,
@@ -62,10 +63,23 @@ public class MusicServlet extends BaseServlet{
         // 3. 检查是否包含当前用户的 ID
         Claims claims = JwtTokenUtil.getClaimsFromToken(accessToken, JwtTokenUtil.ACCESS_TOKEN_SECRET);
         String userId = (String) claims.get("id");
+        // 上传入口必须以服务端审核状态为准，先于任何媒体写入。
+        try {
+            if (singerService.getStatus(userId) != 1) {
+                result.put("success", false);
+                result.put("message", "仅审核通过的音乐人可以上传歌曲");
+                return result;
+            }
+        } catch (RuntimeException e) {
+            result.put("success", false);
+            result.put("message", "无法确认音乐人资格，请稍后重试");
+            return result;
+        }
         boolean existUserId = false;
         List<Singer> singers = new ArrayList<>();
         for (String singerId : singerIds) {
           Singer singer = new Singer();
+            singerId = singerId.trim();
             singer.setId(singerId);
             singers.add(singer);
             // 直接比较当前 singerId 和 userId
@@ -87,7 +101,9 @@ public class MusicServlet extends BaseServlet{
         song.setDuration(duration);
 
         try {
-            musicService.upload(song, musicFile, lyricFile, coverImage);
+            if (!musicService.upload(song, musicFile, lyricFile, coverImage)) {
+                throw new IllegalStateException("歌曲写入失败");
+            }
             result.put("success", true);
         } catch (IllegalArgumentException e) {
             // 格式不支持 / 超出大小上限等可预期错误，把原因返回给用户

@@ -187,6 +187,12 @@ public class HlsStreamingServlet extends BaseServlet {
             return;
         }
 
+        // 即使已生成缓存，撤回审核后也不能继续从缓存播放。
+        if (musicService.getMusicPath(Long.valueOf(songId)) == null) {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND, "歌曲不可播放");
+            return;
+        }
+
         // 3. 验证文件路径（normalize + 前缀校验，双保险）
         Path hlsRoot = Paths.get(hlsRootDir).normalize();
         Path tsPath = hlsRoot.resolve(songId).resolve(fileName).normalize();

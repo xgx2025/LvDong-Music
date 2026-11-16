@@ -212,19 +212,21 @@ public class UserServlet extends BaseServlet{
      * 2. （可选）将当前 token 加入黑名单（如果需要服务器端验证）
      * 3. 返回成功响应
      */
-    protected Object logout(HttpServletRequest request) {
+    protected Object logout(HttpServletRequest request, @ParamName("refreshToken") String refreshTokenParam) {
         try {
             String authHeader = request.getHeader("Authorization");
             if (authHeader != null && authHeader.startsWith("Bearer ")) {
                 String accessToken = authHeader.substring(7);
                 // 将access token加入黑名单
-                if (!JwtTokenUtil.isTokenExpired(accessToken, JwtTokenUtil.ACCESS_TOKEN_SECRET)) {
+                try {
                     Claims claims = JwtTokenUtil.getClaimsFromToken(accessToken, JwtTokenUtil.ACCESS_TOKEN_SECRET);
                     TokenBlacklist.add(accessToken, claims.getExpiration().getTime());
+                } catch (RuntimeException invalidAccessToken) {
+                    // 无效/过期 access token 不妨碍撤销仍有效的 refresh token。
                 }
             }
             // 同时将refresh token加入黑名单（如果在请求体中提供）
-            String refreshTokenParam = request.getParameter("refreshToken");
+            // refreshToken 由 BaseServlet 统一从 JSON 或表单参数绑定。
             if (refreshTokenParam != null && !refreshTokenParam.isEmpty()) {
                 if (!JwtTokenUtil.isTokenExpired(refreshTokenParam, JwtTokenUtil.REFRESH_TOKEN_SECRET)) {
                     Claims claims = JwtTokenUtil.getClaimsFromToken(refreshTokenParam, JwtTokenUtil.REFRESH_TOKEN_SECRET);
@@ -253,6 +255,9 @@ public class UserServlet extends BaseServlet{
     protected JsonObject refreshToken(@ParamName("refreshToken") String refreshToken) {
         log.info("正在刷新token");
         try {
+            if (refreshToken == null || refreshToken.isBlank() || TokenBlacklist.contains(refreshToken)) {
+                throw new IllegalArgumentException("刷新凭证已撤销或缺失");
+            }
             // 1. 验证refreshToken的有效性
             Claims claims = JwtTokenUtil.getClaimsFromToken(refreshToken, JwtTokenUtil.REFRESH_TOKEN_SECRET);
             if (claims == null) {
@@ -271,7 +276,7 @@ public class UserServlet extends BaseServlet{
 
             // 3. 生成新的accessToken
             String newAccessToken = JwtTokenUtil.generateAccessToken(userInfo);
-            String newRefreshToken = JwtTokenUtil.generateRefreshToken(userInfo);
+            String newRefreshToken = refreshToken; // 固定期限：退出可以撤销同一会话的刷新凭证
             // 4. 构建响应
             JsonObject response = new JsonObject();
             JsonObject tokens = new JsonObject();

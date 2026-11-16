@@ -30,8 +30,15 @@ public class SearchServlet extends BaseServlet{
             // 搜索允许匿名访问，token 无效时按未登录处理，不影响结果返回
             String userId = null;
             if (accessToken != null && !accessToken.isEmpty()) {
-                userId = (String) JwtTokenUtil
-                        .getClaimsFromToken(accessToken, JwtTokenUtil.ACCESS_TOKEN_SECRET).get("id");
+                try {
+                    if (!utils.TokenBlacklist.contains(accessToken)) {
+                        userId = (String) JwtTokenUtil
+                                .getClaimsFromToken(accessToken, JwtTokenUtil.ACCESS_TOKEN_SECRET).get("id");
+                    }
+                } catch (RuntimeException invalidToken) {
+                    // 公开搜索：过期或无效凭证降级为匿名。
+                    userId = null;
+                }
             }
             log.info("搜索关键词: {}, page={}, pageSize={}", keyword, page, pageSize);
 
