@@ -59,3 +59,51 @@ it("fails immediately for FAILED instead of pretending ready", async () => {
     prepareLegacy("1", "token", new AbortController().signal, vi.fn()),
   ).rejects.toThrow("转换失败");
 });
+
+it("bounds queued preparation at five minutes and allows an explicit retry", async () => {
+  vi.useFakeTimers();
+  const { prepareLegacy } = await adapter();
+  let calls = 0;
+  const fetcher = vi.fn(async () =>
+    Response.json(
+      ++calls === 1 ? { success: true } : { state: "QUEUED", ready: false },
+    ),
+  );
+  vi.stubGlobal("fetch", fetcher);
+  const preparation = expect(
+    prepareLegacy("1", "token", new AbortController().signal, vi.fn()),
+  ).rejects.toThrow("超过五分钟");
+  await vi.advanceTimersByTimeAsync(300000);
+  await preparation;
+  const stoppedAt = fetcher.mock.calls.length;
+  await vi.advanceTimersByTimeAsync(5000);
+  expect(fetcher).toHaveBeenCalledTimes(stoppedAt);
+
+  let retryCalls = 0;
+  vi.stubGlobal("fetch", vi.fn(async () => Response.json(
+    ++retryCalls === 1 ? { success: true } : { state: "READY", ready: true },
+  )));
+  await expect(
+    prepareLegacy("1", "token", new AbortController().signal, vi.fn()),
+  ).resolves.toMatchObject({ hls: true });
+});
+
+it("cancels polling without another status request or late ready result", async () => {
+  vi.useFakeTimers();
+  const { prepareLegacy } = await adapter();
+  let calls = 0;
+  const fetcher = vi.fn(async () => Response.json(
+    ++calls === 1 ? { success: true } : { state: "QUEUED", ready: false },
+  ));
+  vi.stubGlobal("fetch", fetcher);
+  const controller = new AbortController();
+  const preparation = expect(
+    prepareLegacy("1", "token", controller.signal, vi.fn()),
+  ).rejects.toThrow("cancel preparation");
+  await vi.advanceTimersByTimeAsync(100);
+  expect(fetcher).toHaveBeenCalledTimes(2);
+  controller.abort(new Error("cancel preparation"));
+  await preparation;
+  await vi.advanceTimersByTimeAsync(5000);
+  expect(fetcher).toHaveBeenCalledTimes(2);
+});
