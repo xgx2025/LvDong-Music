@@ -2,7 +2,7 @@
 
 ## 历史与交付边界
 
-`v1.0.0` 保留在 `a740ca268840568dedfd85d96223c8dd29378d73`，发布为 Servlet / JDBC JavaWeb 学习版本。升级工作在 `xgx-dev`，未授权时不推送、不发布 Release。当前运行实现仍为 Servlet 3.1 / JDBC / HikariCP / MySQL / WAR / Tomcat 9。
+`v1.0.0` 保留在 `a740ca268840568dedfd85d96223c8dd29378d73`，发布为 Servlet / JDBC JavaWeb 学习版本。升级工作在 `xgx-dev`，未授权时不推送、不发布 Release。旧站运行方式仍为 Servlet 3.1 / JDBC / HikariCP / MySQL / WAR / Tomcat 9；独立 backend/ 已建立 Boot 搜索迁移切片，尚未替换旧站。
 
 ## 目标结构
 
@@ -13,7 +13,7 @@
 
 ## Java / Spring 版本决策
 
-本机已实测 Java 21.0.9、Maven 3.9.10。首阶段保留 Java 16 编译目标，避免改变历史 Tomcat 部署要求。后端迁移目标为 Java 21 和 Spring Boot 4.1.2（本次查询官方项目页显示的稳定版）；实际新增 backend/pom.xml 时重新核对受支持分支及安全补丁，再锁定 BOM。
+本机已实测 Java 21.0.9、Maven 3.9.10。首阶段保留 Java 16 编译目标，避免改变历史 Tomcat 部署要求。独立后端已锁定 Java 21 和 Spring Boot 4.1.2。本轮重新查询官方系统要求与 Maven Central 元数据，确认4.1.2为稳定版且可下载（不采用4.2.0-RC2预览版），实际依赖解析和可执行JAR验证通过。
 
 依据：[官方项目页](https://spring.io/projects/spring-boot/)、[系统要求](https://docs.spring.io/spring-boot/system-requirements.html)、[4.0 迁移说明](https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-4.0-Migration-Guide)。本次官方文档说明 Java 17+、Maven 3.6.3+、Tomcat 11 / Servlet 6.1。Java 21 满足要求，Tomcat 9 不满足新容器要求。Servlet/Filter/WebSocket 的 `javax.*` 应改为相应 `jakarta.*`；JDBC `java.sql`、加密 `javax.crypto` 不作机械替换。不要直接把旧 WAR 放入新容器。
 
@@ -40,3 +40,11 @@
 当前刷新凭证固定期限复用，退出将其加入进程内黑名单；避免轮换后旧令牌链绕过退出。黑名单仍非持久化，重启会丢失；已签发的其他 access token 仍可活到自身过期，下一阶段需持久化会话标识及统一撤销。尚未完成真实 MySQL/Tomcat/浏览器端到端，H2 仅用于隔离 SQL/事务回归。
 
 不运行历史数据库全量初始化脚本，不清理现有媒体，不提交 docs/、本地配置或构建产物。
+
+## 第三阶段首个切片：Boot公开搜索（已交付）
+
+`backend/` 是独立 Maven 项目，不将根 WAR 改成聚合 POM。Controller → Service → JDBC DAO 分层，统一响应、参数校验、异常脱敏；查询在同一只读 REPEATABLE_READ 事务中完成。按歌曲分页并批量获取关联歌手，避免该路径的 N+1。新API为 GET /api/v1/search，兼容适配仅提供 POST /searchServlet?action=search 的JSON行为。详见 [后端运行说明](../backend/README.md) 与 [OpenAPI](../backend/openapi.yaml)。
+
+本切片只提供匿名查询。所有凭证忽略、userHasFavorite=false；专辑和歌单保留空实现。根WAR及旧搜索Servlet未修改，不把旧JWT、JAXB、邮件和WebSocket依赖带入新后端。没有自动执行生产迁移或切换流量，不能将Boot服务视为整个旧站的替代。
+
+后续顺序：迁移并持久化认证会话及撤销语义；迁移收藏写事务并复用MySQL并发验收；独立媒体存储与上传预处理；建立Vue常驻播放器外壳。各项独立验收后再切换对应路由。阶段3整体仍未完成。

@@ -2,13 +2,13 @@
 
 《律动音乐》是一个基于传统 Java Servlet 技术栈的音乐流媒体网站，包含用户体系、在线播放、评论互动、歌曲上传与哼唱识曲等模块。
 
-项目没有使用 Spring 等框架，Servlet → Service → DAO 三层手写实现，适合作为理解 JavaWeb 请求分发、原生 JDBC 与连接池、JWT 认证的实践参考。
+历史版本采用 Servlet → Service → DAO 三层手写实现，适合作为理解 JavaWeb 请求分发、原生 JDBC 与连接池、JWT 认证的实践参考。当前在保留旧 WAR 的同时，逐步迁移到独立 Spring Boot 后端。
 
 ## 架构升级进展
 
 历史学习版本见 [v1.0.0](https://github.com/xgx2025/LvDong-Music/releases/tag/v1.0.0)。当前升级先建立 Servlet 业务回归基线，再渐进迁移到 Vue 3 + TypeScript 与 Spring Boot 分层单体。
 
-查看[迁移阶段与验收标准](architecture/migration.md)、[接口兼容契约](architecture/api-contract.md)和[首阶段验证记录](architecture/verification.md)。已交付收藏事务与HLS任务可靠性改造（含隔离MySQL和实际FFmpeg回归）。新前端与 Boot 运行入口尚未交付；页面中的推荐、歌单和 AI 演示不代表已有完整后端功能。
+查看[迁移阶段与验收标准](architecture/migration.md)、[接口兼容契约](architecture/api-contract.md)和[首阶段验证记录](architecture/verification.md)。已交付收藏事务与HLS任务可靠性改造（含隔离MySQL和实际FFmpeg回归）。已新增 [Java 21 / Boot 4.1.2 独立后端](backend/README.md)，提供公开搜索新 API 与旧 JSON 搜索适配，并保留根目录 WAR 构建。Vue 新前端尚未交付；页面中的推荐、歌单和 AI 演示不代表已有完整后端功能。
 
 旧截图链接已失效，暂移除引用。后续经验证的公开截图统一放在 `assets/screenshots/` 并使用仓库相对链接。
 
@@ -72,6 +72,7 @@ ListenToMusic
 │   └── logback.xml
 ├── src/main/webapp                      页面与静态资源
 ├── src/test                             隔离数据库与 Servlet 业务回归
+├── backend/                             独立 Boot JAR、公开搜索及 HTTP 集成回归
 ├── architecture/                        迁移方案、接口契约与验证记录
 └── pom.xml
 ```

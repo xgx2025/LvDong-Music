@@ -46,3 +46,20 @@
 尚未完成真实浏览器端到端。新的HLS任务仅在单实例内协调；旧版本切片不自动回收；播放首次触发转换并等待完整VOD，因此大文件首次等待可能超过旧播放器30秒轮询上限。上传独立存储、上传完成预处理、Boot运行框架和Vue应用外壳仍是后续工作。
 
 VOD参数参考 [FFmpeg官方HLS文档](https://ffmpeg.org/ffmpeg-formats.html#hls-2)；具体行为以本轮实际转换/解码回归为依据。
+
+## 第三阶段首个切片：Boot公开搜索（2026-11-16）
+
+新增独立Java21 / Boot4.1.2 JAR，根WAR仍为Java16目标。本轮重新核对[官方系统要求](https://docs.spring.io/spring-boot/system-requirements.html)与Maven Central元数据，实际解析4.1.2、嵌入式Tomcat11及JDBC/校验依赖成功。
+
+| 命令 | 本轮结果 |
+| --- | --- |
+| `mvn -o -f backend/pom.xml clean verify` | 6项真实嵌入式HTTP + 固定内存H2回归通过，生成可执行JAR |
+| `python scripts/run-isolated-mysql.py --backend` | 同组6项真实MySQL 8.0.41 HTTP回归通过，随后启动打包JAR并验证搜索，临时实例关闭 |
+| `mvn -o -Pmedia-regression clean verify` | 旧WAR 18项回归通过，含实际FFmpeg短长音频及AES解码 |
+| `python scripts/run-isolated-mysql.py` | 原收藏并发/回滚1项通过，增量索引脚本重复执行通过 |
+
+共31项测试执行（新搜索6项分别在H2/MySQL各执行一次）通过，另外完成可执行JAR启动/查询冒烟。新搜索覆盖审核状态隔离、多歌手关联分页、稳定排序、大整数字符串ID、空结果、极大页码、SQL注入样式关键词绑定、旧JSON响应和页码钳制、无效凭证匿名化、字段边界、损坏JSON、数据库错误不伪装成功及响应脱敏。数据库异常用例主动破坏的表仅在新建临时库内，测试后恢复夹具。
+
+JAR/WAR ZIP目录检查通过：均不含私人application.properties、H2或测试类；新JAR不引入旧javax.servlet API。未读取现有数据库、未执行生产升级、未改媒体或旧Servlet源码。v1.0.0解引用仍为冻结提交。
+
+限制：新后端目前只支持匿名公开搜索，不提供登录和个人收藏状态；专辑/歌单仍为空实现；没有新Vue应用、浏览器端到端或真实流量切换。只读事务与分层框架就绪不代表整个阶段3完成。新服务运行和外部配置见[后端说明](../backend/README.md)，HTTP接口见[OpenAPI](../backend/openapi.yaml)。

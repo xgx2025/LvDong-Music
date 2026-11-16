@@ -1,6 +1,6 @@
 # 首阶段接口兼容契约
 
-此文档冻结已有 Servlet 的必要行为；计划中的 `/api/v1` 尚未实现。路径均相对部署 context，不把 `/xgxmusic` 当成业务契约。ID 为十进制字符串，避免 JavaScript 大整数精度丢失。
+此文档冻结已有 Servlet 的必要行为；`backend/` 已实现 `/api/v1/search`；其他 `/api/v1` 业务尚未迁移。路径均相对部署 context，不把 `/xgxmusic` 当成业务契约。ID 为十进制字符串，避免 JavaScript 大整数精度丢失。
 
 | 请求 | 入参 / 身份 | 首阶段响应及保证 |
 | --- | --- | --- |
@@ -24,3 +24,11 @@
 - `hls?action=checkStatus` 保留 ready，并增加 state：NOT_REQUESTED / QUEUED / RUNNING / READY / FAILED。只有完整清单和全部切片存在时才为 READY；FAILED 提供可显示的通用 message。旧播放器轮询遇到 FAILED 立即显示错误。
 - VOD 使用完整列表，不再按50片滚动。每次转换使用唯一的切片和AES密钥文件名，成功后原子替换 index.m3u8；失败不覆盖旧清单、不删除现存媒体。源路径、大小和修改时间用于识别缓存版本；旧文件可读，下一次任务会按版本重新生成。
 - 清单返回时把切片/密钥URL改写为鉴权Servlet；原生HLS查询token传给子请求。清单和密钥 no-store，切片 private/no-store。只有16字节密钥允许返回，内部keyinfo和转换日志不在文件白名单内。实际部署应使用HTTPS，访问日志避免记录token查询参数。
+
+## 第三阶段公开搜索切片
+
+新服务默认端口8081，无固定context。GET `/api/v1/search` 接受 keyword（默认空，最多200字符）、page（默认1，>=1）、pageSize（默认20，1..100）；返回 `{code:0,message:"操作成功",data:SearchVO}`。越界、类型错误、损坏JSON为HTTP400，字段校验错误在data映射中；数据库异常为HTTP500且不暴露SQL。分页偏移使用long避免int溢出，ID始终为字符串，结果不含audioUrl。歌曲仅state=1；按相关度与id稳定排序；歌手摘要首8条。
+
+新服务的 POST `/searchServlet?action=search` 仅适配JSON请求及旧 `{success,message}` 响应。缺省或非正page归1，缺省/非正pageSize归20，上限100；keyword最多200。数据库失败返回HTTP200 `{success:false,message:"查询失败"}`；请求校验失败为统一HTTP400。Bearer或请求体token均忽略、按匿名处理，userHasFavorite固定false。旧WAR的原有身份解析和其他Servlet入口不变。此适配不涵盖旧BaseServlet的GET、表单或JSON内action分发。
+
+albums/playlists仍为[]，albumCount/playlistCount仍为0。详细机器可读定义见 [OpenAPI](../backend/openapi.yaml)。后端使用标准Spring外部配置，不加载旧APP_CONFIG_FILE，不自动执行DDL。

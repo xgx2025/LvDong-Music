@@ -1,0 +1,107 @@
+openapi: 3.1.0
+info:
+  title: 律动音乐公开搜索
+  version: 0.1.0
+paths:
+  /api/v1/search:
+    get:
+      operationId: search
+      summary: 匿名搜索已发布歌曲及歌手
+      parameters:
+        - {name: keyword, in: query, schema: {type: string, maxLength: 200, default: ''}}
+        - {name: page, in: query, schema: {type: integer, minimum: 1, maximum: 2147483647, default: 1}}
+        - {name: pageSize, in: query, schema: {type: integer, minimum: 1, maximum: 100, default: 20}}
+      responses:
+        '200':
+          description: 搜索成功；专辑和歌单目前返回空数组及0计数，用户收藏状态固定false
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [code, message, data]
+                properties:
+                  code: {type: integer, const: 0}
+                  message: {type: string}
+                  data: {$ref: '#/components/schemas/Search'}
+        '400': {$ref: '#/components/responses/Invalid'}
+        '500': {$ref: '#/components/responses/Failure'}
+  /searchServlet:
+    post:
+      operationId: legacySearch
+      summary: 旧JSON搜索适配，所有凭证按匿名处理
+      parameters:
+        - {name: action, in: query, required: true, schema: {type: string, const: search}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                keyword: {type: [string, 'null'], maxLength: 200}
+                page: {type: [integer, 'null'], description: 小于1钳制为1}
+                pageSize: {type: [integer, 'null'], description: 不大于0默认20，大于100钳制为100}
+      responses:
+        '200':
+          description: success为true时message是搜索结果，为false时message是通用错误文本
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: {type: boolean}
+                  message:
+                    oneOf:
+                      - {$ref: '#/components/schemas/Search'}
+                      - {type: string}
+        '400': {$ref: '#/components/responses/Invalid'}
+components:
+  responses:
+    Invalid:
+      description: 非法参数或JSON；code为400，data为字段错误映射（解析错误时可为空映射）
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    Failure:
+      description: 服务错误，不暴露SQL或路径
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+  schemas:
+    Error:
+      type: object
+      properties:
+        code: {type: integer}
+        message: {type: string}
+        data: {type: [object, 'null'], additionalProperties: {type: string}}
+    Search:
+      type: object
+      properties:
+        songCount: {type: integer, format: int64}
+        albumCount: {type: integer, const: 0}
+        singerCount: {type: integer, format: int64}
+        playlistCount: {type: integer, const: 0}
+        songs: {type: array, items: {$ref: '#/components/schemas/Song'}}
+        singers: {type: array, maxItems: 8, items: {$ref: '#/components/schemas/Singer'}}
+        albums: {type: array, maxItems: 0, items: {}}
+        playlists: {type: array, maxItems: 0, items: {}}
+    Singer:
+      type: object
+      properties:
+        id: {type: string}
+        name: {type: [string, 'null']}
+        avatar: {type: [string, 'null']}
+    Song:
+      type: object
+      properties:
+        rank: {type: integer, description: 当前页内排名，从1开始}
+        songId: {type: string}
+        songName: {type: [string, 'null']}
+        duration: {type: [string, 'null']}
+        albumId: {type: [string, 'null']}
+        albumName: {type: [string, 'null']}
+        coverUrl: {type: [string, 'null']}
+        lyricUrl: {type: [string, 'null']}
+        favoriteCount: {type: integer}
+        userHasFavorite: {type: boolean, const: false}
+        singers: {type: array, items: {$ref: '#/components/schemas/Singer'}}
