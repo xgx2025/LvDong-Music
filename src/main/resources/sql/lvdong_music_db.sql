@@ -36,7 +36,8 @@ CREATE TABLE `comment_likes`  (
   `comment_id` bigint NOT NULL COMMENT '评论ID',
   `user_id` bigint NOT NULL COMMENT '用户ID',
   `created_at` datetime NOT NULL COMMENT '创建时间',
-  PRIMARY KEY (`id`) USING BTREE
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_comment_user`(`comment_id` ASC, `user_id` ASC) USING BTREE COMMENT '同一用户对同一评论只能点赞一次'
 ) ENGINE = InnoDB AUTO_INCREMENT = 114 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------

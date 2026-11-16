@@ -47,8 +47,33 @@ public class DatabaseUtil {
         return threadLocal.get();
     }
 
+    // 写操作用：事务中返回线程绑定的连接，否则从池中取一条新连接
+    // 用完后必须调用 releaseIfNotManaged(conn) 归还，否则会耗尽连接池
+    public static Connection getWriteConnection() throws SQLException {
+        Connection conn = threadLocal.get();
+        return conn != null ? conn : dataSource.getConnection();
+    }
+
+    // 若连接不属于当前事务（即从池中临时取出），则归还连接池
+    public static void releaseIfNotManaged(Connection conn) {
+        if (conn == null || conn == threadLocal.get()) {
+            return;
+        }
+        try {
+            if (!conn.isClosed()) {
+                conn.close();
+            }
+        } catch (SQLException e) {
+            log.error("归还数据库连接失败: {}", e.getMessage(), e);
+        }
+    }
+
     // 开启事务并绑定连接
     public static void beginTransaction() throws SQLException {
+        if (threadLocal.get() != null) {
+            // 同一线程重复开启事务会再借一条连接，导致连接无法归还
+            throw new IllegalStateException("当前线程已存在未结束的事务，不支持嵌套事务");
+        }
         Connection conn = dataSource.getConnection();
         conn.setAutoCommit(false);
         threadLocal.set(conn);

@@ -80,24 +80,34 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     public Comment addComment(Comment comment) throws RuntimeException {
+        boolean isRootComment = comment.getParentId() == null
+                || comment.getParentId().trim().isEmpty()
+                || "0".equals(comment.getParentId().trim());
         try {
-            // 验证父评论是否存在（如果是回复）
-            if (comment.getParentId() != null) {
+            // 校验放在事务之外，缩短事务持有时间
+            if (!isRootComment) {
                 validateParentComment(comment);
             }
 
             // 设置创建时间
             comment.setCreateTime(new Timestamp(System.currentTimeMillis()));
-            // 保存评论
-            long commentId = commentDao.addComment(comment);
-            comment.setId(String.valueOf(commentId));
 
-            // 如果是回复，更新父评论的回复数
-            if (comment.getParentId() != null) {
-                commentDao.updateReplyCount(Long.parseLong(comment.getParentId()), 1);
+            // 插入评论与更新父评论回复数必须在同一事务内，否则计数会漂移
+            DatabaseUtil.beginTransaction();
+            try {
+                long commentId = commentDao.addComment(comment);
+                comment.setId(String.valueOf(commentId));
+
+                if (!isRootComment) {
+                    commentDao.updateReplyCount(Long.parseLong(comment.getParentId().trim()), 1);
+                }
+                DatabaseUtil.commit();
+            } catch (Exception e) {
+                DatabaseUtil.rollback();
+                throw e;
             }
 
-            // 补充用户信息
+            // 事务提交后再补齐展示字段，避免把查询开销算进事务
             enrichUserInfo(comment);
 
             return comment;

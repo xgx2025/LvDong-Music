@@ -200,8 +200,8 @@ public class CommentDaoImpl implements CommentDao {
                 "parent_id, reply_to_user_id, like_count, reply_count, status, created_at) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-        try (Connection conn = DatabaseUtil.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        Connection conn = DatabaseUtil.getWriteConnection();
+        try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             stmt.setLong(1, Long.parseLong(comment.getUserId()));
             stmt.setInt(2, comment.getResourceType());
@@ -239,6 +239,8 @@ public class CommentDaoImpl implements CommentDao {
                     throw new SQLException("创建评论失败，无法获取ID");
                 }
             }
+        } finally {
+            DatabaseUtil.releaseIfNotManaged(conn);
         }
     }
 
@@ -249,12 +251,14 @@ public class CommentDaoImpl implements CommentDao {
     public void updateReplyCount(long parentId, int increment) throws SQLException {
         String sql = "UPDATE comments SET reply_count = reply_count + ? WHERE id = ?";
 
-        try (Connection conn = DatabaseUtil.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        Connection conn = DatabaseUtil.getWriteConnection();
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, increment);
             stmt.setLong(2, parentId);
             stmt.executeUpdate();
+        } finally {
+            DatabaseUtil.releaseIfNotManaged(conn);
         }
     }
 
@@ -349,42 +353,40 @@ public class CommentDaoImpl implements CommentDao {
 
     @Override
     public boolean likeComment(long commentId, String userId) throws SQLException {
-        if (hasLiked(commentId, userId)) {
-            return false;
-        }
-        String sql = "INSERT INTO comment_likes (comment_id, user_id,created_at) VALUES (?, ?,?)";
-        Connection conn = DatabaseUtil.getCurrentConnection() != null ? DatabaseUtil.getCurrentConnection() : DatabaseUtil.getConnection();
+        // 依赖 comment_likes(comment_id, user_id) 唯一索引实现幂等：
+        // 重复点赞时 affectedRows = 0，不再累加 like_count，避免并发下重复计数
+        String sql = "INSERT INTO comment_likes (comment_id, user_id, created_at) VALUES (?, ?, ?) " +
+                "ON DUPLICATE KEY UPDATE id = id";
+        Connection conn = DatabaseUtil.getWriteConnection();
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, commentId);
             stmt.setLong(2, Long.parseLong(userId));
-            stmt.setTimestamp(3,new Timestamp(System.currentTimeMillis()));
-            stmt.executeUpdate();
+            stmt.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
+            if (stmt.executeUpdate() == 0) {
+                return false; // 已点赞，幂等返回
+            }
             updateLikeCount(commentId, 1);
             return true;
-        } catch (SQLException e) {
-            log.error("点赞失败: commentId={}, userId={}", commentId, userId, e);
-            throw new RuntimeException("点赞失败"+e.getMessage(), e);
+        } finally {
+            DatabaseUtil.releaseIfNotManaged(conn);
         }
     }
 
     @Override
     public boolean cancelLikeComment(long commentId, String userId) throws SQLException {
-        // 先检查是否已经点赞
-        if (!hasLiked(commentId, userId)) {
-            return false; // 未点赞，无需取消
-        }
         String sql = "DELETE FROM comment_likes WHERE comment_id = ? AND user_id = ?";
-        Connection conn = DatabaseUtil.getCurrentConnection() != null ? DatabaseUtil.getCurrentConnection() : DatabaseUtil.getConnection();
+        Connection conn = DatabaseUtil.getWriteConnection();
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            // 1. 删除点赞记录
             stmt.setLong(1, commentId);
             stmt.setLong(2, Long.parseLong(userId));
-            stmt.executeUpdate();
-            // 2. 更新评论的点赞数
+            // 删除结果本身就是“是否点过赞”的权威判断，避免先查后删的竞态
+            if (stmt.executeUpdate() == 0) {
+                return false;
+            }
             updateLikeCount(commentId, -1);
             return true;
-        } catch (SQLException e) {
-            throw e;
+        } finally {
+            DatabaseUtil.releaseIfNotManaged(conn);
         }
     }
 
@@ -422,13 +424,15 @@ public class CommentDaoImpl implements CommentDao {
 
     @Override
     public void updateLikeCount(long commentId, int increment) throws SQLException {
-        String sql = "UPDATE comments SET like_count = like_count + ? WHERE id = ?";
-        try (PreparedStatement stmt = DatabaseUtil.getCurrentConnection().prepareStatement(sql)) {
+        // GREATEST 防止并发取消点赞把计数打成负数
+        String sql = "UPDATE comments SET like_count = GREATEST(like_count + ?, 0) WHERE id = ?";
+        Connection conn = DatabaseUtil.getWriteConnection();
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, increment);
             stmt.setLong(2, commentId);
             stmt.executeUpdate();
-        }catch (Exception e){
-            throw new RuntimeException(e);
+        } finally {
+            DatabaseUtil.releaseIfNotManaged(conn);
         }
     }
 }
