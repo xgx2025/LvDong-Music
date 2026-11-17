@@ -68,4 +68,5 @@ docs/
 /architecture/
 /scripts/
 /backend/openapi.yaml
+/backend/storage/
 /frontend/tests/*.py

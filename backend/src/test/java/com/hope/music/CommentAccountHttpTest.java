@@ -35,6 +35,7 @@ class CommentAccountHttpTest {
     @DynamicPropertySource static void storage(DynamicPropertyRegistry registry) {
         registry.add("app.storage.root",()->FILES.resolve("new").toString());
         registry.add("app.storage.legacy-root",()->FILES.resolve("legacy").toString());
+        registry.add("app.storage.legacy-audio-root",()->FILES.resolve("legacy").toString());
         registry.add("app.storage.hls-root",()->FILES.resolve("hls").toString());
     }
     @LocalServerPort int port;

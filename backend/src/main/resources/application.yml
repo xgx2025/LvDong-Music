@@ -40,6 +40,7 @@ app:
   storage:
     root: ${STORAGE_ROOT:}
     legacy-root: ${LEGACY_STORAGE_ROOT:}
+    legacy-audio-root: ${LEGACY_AUDIO_ROOT:${LEGACY_STORAGE_ROOT:}}
     hls-root: ${HLS_ROOT_DIR:}
   media:
     ffmpeg: ${FFMPEG_PATH:ffmpeg}

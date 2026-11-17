@@ -15,8 +15,12 @@ import java.util.*;
 public class FileStorageService {
     private final String root;
     private final String legacy;
+    private final String legacyAudio;
     public FileStorageService(@Value("${app.storage.root:}") String root,
-            @Value("${app.storage.legacy-root:}") String legacy) { this.root = root; this.legacy = legacy; }
+            @Value("${app.storage.legacy-root:}") String legacy,
+            @Value("${app.storage.legacy-audio-root:${app.storage.legacy-root:}}") String legacyAudio) {
+        this.root = root; this.legacy = legacy; this.legacyAudio = legacyAudio.isBlank() ? legacy : legacyAudio;
+    }
     public record FilePayload(String name, String type, String data) { }
     public record SavedFile(Path path, String url) { }
     private static ResponseStatusException bad() { return new ResponseStatusException(HttpStatus.BAD_REQUEST, "文件格式或大小无效"); }
@@ -91,7 +95,7 @@ public class FileStorageService {
     public Path audioFile(String input) throws IOException {
         if (input == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         Path path = Path.of(input).toRealPath();
-        for (String configured : List.of(root, legacy)) {
+        for (String configured : List.of(root, legacyAudio)) {
             if (!configured.isBlank() && path.startsWith(Path.of(configured).toRealPath()) && Files.isRegularFile(path)) return path;
         }
         throw new ResponseStatusException(HttpStatus.NOT_FOUND);

@@ -15,6 +15,8 @@
 
 需要 Java 21、Maven，以及具有现有业务表的 MySQL 数据库。
 
+首次启动前，必须在目标业务库执行增量脚本 `003_auth_sessions.sql`、`004_email_verifications.sql`、`005_musician_materials.sql`（位于 `src/main/resources/db/`）。仅填写环境变量不会创建这些表；缺少会话表时，即使密码正确也无法完成登录。不要重新导入初始化 SQL 覆盖已有数据。
+
 首次使用时，将 [`.env.example`](.env.example) 复制为 `backend/.env`，填写 `DB_URL`、`DB_USERNAME`、`DB_PASSWORD`，`PORT` 可选（默认8081）。本地 `.env` 被 Git 忽略，不会打入 JAR，示例文件可随源码提交。
 
 从仓库根目录或 `backend/` 目录启动时会自动加载该文件。文件按 Java properties 的 `KEY=value` 格式填写，不加引号、不使用 `export`，反斜杠需转义。系统环境变量优先于文件；若从仓库根目录启动且根目录也有 `.env`，以 `backend/.env` 的同名值为准。
@@ -94,7 +96,8 @@ Boot 使用安全随机的不透明双令牌，只存 SHA-256 摘要。access �
 - 邮件使用 `SMTP_HOST/PORT/USER/PASSWORD/FROM`，默认465隐式TLS；587需启用STARTTLS并关闭隐式SSL。连接、读写均设超时，未配置或发送失败不会返回成功。
 - 识曲使用 `RECOGNITION_ENDPOINT/API_KEY/MODEL`，沿用星火HTTP推断方式，凭证不含Bearer前缀。识曲并非音频指纹识别，未配置返回503。
 - `STORAGE_ROOT`：新音频、公开图片/歌词及私有申请材料的独立目录。客户端文件名不参与路径生成；失败只清理本次创建的文件，不覆盖现有文件。
-- `LEGACY_STORAGE_ROOT`：已有静态资源与音频所在的共同根目录，仅用于只读访问。现有歌曲 audio_url 应指向此目录中的有效文件；不会自动复制或改写旧库路径。
+- `LEGACY_STORAGE_ROOT`：已有图片和歌词的根目录，应包含 `static/`，仅用于只读访问。
+- `LEGACY_AUDIO_ROOT`：旧音频目录；未配置时沿用 `LEGACY_STORAGE_ROOT`。现有歌曲 audio_url 应指向该目录中的有效文件；不会自动复制或改写旧库路径。
 - `HLS_ROOT_DIR`：全新的转换输出目录，禁止配置为现有旧站HLS目录；`FFMPEG_PATH` 指定可执行文件。
 
 `GET /api/v1/assets/...` 仅提供白名单图片和歌词，身份证材料及原始音频不公开。HLS通过 `/api/v1/media/hls?action=processMp3|checkStatus|serveHls` 访问，清单、密钥、切片均验证会话及歌曲审核状态。切片支持Range；原生HLS的查询令牌会传播至子请求，部署时使用HTTPS且避免记录查询凭证。转换保留有界队列、同歌去重、完整VOD和原子发布；当前仍在首次播放时转换，单实例协调，不自动回收历史转换文件。

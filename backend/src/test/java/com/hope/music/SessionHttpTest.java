@@ -99,4 +99,17 @@ class SessionHttpTest {
   jdbc.update("UPDATE auth_sessions SET expires_at=0");
   assertThat(post("session/profile","{}",a).statusCode()).isEqualTo(401);
  }
+ @Test void legacyMd5LoginUpgradesPasswordAndCreatesPersistentSession() throws Exception {
+  String legacy=com.hope.music.auth.util.MD5EncryptUtil.md5("password-123");
+  jdbc.update("UPDATE users SET password=? WHERE email='tester@example.test'",legacy);
+  var response=login();
+  String access=response.path("tokens").path("accessToken").asString();
+  String stored=jdbc.queryForObject("SELECT password FROM users WHERE email='tester@example.test'",String.class);
+  assertThat(stored).startsWith("$2a$");
+  assertThat(PasswordUtil.verify("password-123",stored)).isTrue();
+  assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM auth_sessions",Integer.class)).isEqualTo(1);
+  assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM auth_access_tokens",Integer.class)).isEqualTo(1);
+  assertThat(post("session/profile","{}",access).statusCode()).isEqualTo(200);
+  assertThat(post("session/login","{\"email\":\"tester@example.test\",\"password\":\"incorrect\"}",null).statusCode()).isEqualTo(401);
+ }
 }
