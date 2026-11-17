@@ -8,6 +8,7 @@
 - `POST /searchServlet?action=search`：兼容旧 JSON 搜索请求。
 - Controller → Service → JDBC DAO 分层，Service 管理查询快照与写入事务。
 - 参数校验、统一异常响应、字符串 ID 及当前页歌手批量查询。
+- 已登录用户的 QQ 音乐扫码连接、加密账号绑定、歌单读取与导入快照、歌曲分页和标准音质播放地址解析；配置方式见[QQ 音乐服务](../deploy/qq-music-api/README.md)，启用前显式执行 `006_qq_music_connection.sql` 和 `007_qq_playlist.sql`。QQ 曲库搜索尚未接入。
 
 登录、刷新、退出和本人资料使用持久会话；其余账号写入、评论、文件业务与媒体也已迁入 Boot。搜索统一按匿名处理，`userHasFavorite=false`；专辑和歌单结果暂为空。
 

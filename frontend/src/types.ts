@@ -4,6 +4,9 @@ export interface Singer {
   avatar: string | null;
 }
 export interface Song {
+  provider?: "local" | "qq";
+  providerSongId?: string;
+  mediaMid?: string;
   songId: string;
   songName: string | null;
   duration: string | null;
@@ -15,6 +18,7 @@ export interface Song {
   userHasFavorite: boolean;
   singers: Singer[];
 }
+export const songKey = (song: Song) => `${song.provider || "local"}:${song.songId}`;
 export interface SearchResult {
   songs: Song[];
   singers: Singer[];

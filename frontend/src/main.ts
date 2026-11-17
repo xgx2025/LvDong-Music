@@ -28,6 +28,7 @@ const router = createRouter({
     { path: "/musician", component: () => import("./views/MusicianView.vue"), meta: { dark: true, title: "音乐人申请" } },
     { path: "/upload", alias: "/upload-music.html", component: () => import("./views/UploadView.vue"), meta: { title: "上传音乐" } },
     { path: "/favorites", component: () => import("./views/FavoritesView.vue"), meta: { title: "我的收藏" } },
+    { path: "/qq-playlists", component: () => import("./views/QqPlaylistsView.vue"), meta: { title: "QQ 歌单" } },
     { path: "/song/:id", component: () => import("./views/SongView.vue"), meta: { title: "歌曲详情" } },
     { path: "/recognition", alias: "/humming-recognition.html", component: () => import("./views/RecognitionView.vue"), meta: { title: "哼唱识曲" } },
     { path: "/feedback", alias: "/feedback.html", component: () => import("./views/FeedbackView.vue"), meta: { title: "意见反馈" } },

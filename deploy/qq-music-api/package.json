@@ -1,0 +1,11 @@
+{
+  "name": "lvdong-qq-music-api",
+  "private": true,
+  "version": "0.1.0",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "setup": "node setup.cjs",
+    "start": "node start.cjs"
+  },
+  "dependencies": { "@yakult-green-tea/qq-music-api": "3.3.6" }
+}

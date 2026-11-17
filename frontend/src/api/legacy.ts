@@ -35,6 +35,7 @@ export interface MediaSource {
   url: string;
   token?: string;
   hls?: boolean;
+  preview?: boolean;
 }
 export async function prepareLegacy(
   songId: string,

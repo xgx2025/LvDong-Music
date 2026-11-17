@@ -1,6 +1,8 @@
 import { computed, ref } from "vue";
 import { defineStore } from "pinia";
 import type { Song } from "../types";
+import { songKey } from "../types";
+import { qqMusic } from "../api/qqMusic";
 import { AudioEngine } from "../player/engine";
 import { prepareLegacy, type MediaSource } from "../api/legacy";
 import { useSessionStore } from "./session";
@@ -18,6 +20,7 @@ export const usePlayerStore = defineStore("player", () => {
     message = ref(""),
     expanded = ref(false);
   const playMode = ref<"sequence" | "single" | "random">("single");
+  const preview = ref(false);
   const modeLabel = computed(() => ({ sequence: "顺序播放", single: "单曲循环", random: "随机播放" })[playMode.value]);
   let previousVolume = volume.value;
   const current = computed(() => queue.value[index.value]);
@@ -27,6 +30,10 @@ export const usePlayerStore = defineStore("player", () => {
   let resolver = async (song: Song, signal: AbortSignal): Promise<MediaSource> => {
     const session = useSessionStore(), version = session.revision;
     if (!session.authenticated) throw new RequestError("http", "请先登录后播放音乐", 401);
+    if (song.provider === "qq") {
+      const source = await qqMusic.playback(song, signal);
+      return { url: source.url, hls: false, preview: source.preview };
+    }
     const prepare = () => prepareLegacy(song.songId, session.accessToken, signal, text => { message.value = text; });
     try { return await prepare(); }
     catch (error) {
@@ -47,7 +54,7 @@ export const usePlayerStore = defineStore("player", () => {
   });
   engine.audio.addEventListener("playing", () => {
     playing.value = true;
-    message.value = "";
+    message.value = preview.value ? "当前播放为 QQ 音乐试听片段" : "";
   });
   engine.audio.addEventListener("pause", () => {
     playing.value = false;
@@ -82,10 +89,20 @@ export const usePlayerStore = defineStore("player", () => {
     if (queue.value.length) return select(index.value < 0 ? 0 : (index.value - 1 + queue.value.length) % queue.value.length);
   }
   function enqueue(song: Song) {
-    const found = queue.value.findIndex((item) => item.songId === song.songId);
+    const found = queue.value.findIndex((item) => songKey(item) === songKey(song));
     if (found >= 0) return found;
     queue.value.push(song);
     return queue.value.length - 1;
+  }
+  function enqueueMany(songs: Song[]) {
+    const keys = new Set(queue.value.map(songKey));
+    let added = 0;
+    for (const song of songs) {
+      const key = songKey(song);
+      if (keys.has(key)) continue;
+      keys.add(key); queue.value.push(song); added++;
+    }
+    return added;
   }
   async function select(target: number) {
     if (!queue.value[target]) return;
@@ -97,12 +114,14 @@ export const usePlayerStore = defineStore("player", () => {
     playing.value = false;
     position.value = 0;
     duration.value = 0;
+    preview.value = false;
     index.value = target;
     busy.value = true;
     message.value = "正在连接媒体服务…";
     try {
       const source = await resolver(queue.value[target]!, request.signal);
       if (request.signal.aborted) return;
+      preview.value = source.preview === true;
       if (!(await engine.load(source)) || request.signal.aborted) return;
       loaded = true;
       await engine.play();
@@ -138,6 +157,7 @@ export const usePlayerStore = defineStore("player", () => {
     position.value = 0;
     duration.value = 0;
     message.value = "";
+    preview.value = false;
   }
   function remove(target: number) {
     if (target === index.value) {
@@ -177,6 +197,8 @@ export const usePlayerStore = defineStore("player", () => {
     next,
     previous,
     enqueue,
+    enqueueMany,
+    preview,
     select,
     toggle,
     stop,

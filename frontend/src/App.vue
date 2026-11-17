@@ -14,7 +14,7 @@ function globalSearch() {
 const player = usePlayerStore();
 const session = useSessionStore(), route = useRoute(), router = useRouter();
 watch(() => route.query.q, value => globalKeyword.value = String(value || ""), { immediate: true });
-watch(() => session.revision, () => { player.stop(); player.expanded = false; }, { flush: "sync" });
+watch(() => session.revision, () => { player.clear(); player.expanded = false; }, { flush: "sync" });
 watch(() => session.authenticated, (loggedIn) => {
   if (!loggedIn && route.meta.public !== true) void router.replace({ path: "/login", query: { redirect: route.fullPath } });
 });
@@ -32,6 +32,7 @@ watch(() => session.authenticated, (loggedIn) => {
         <nav aria-label="主导航">
           <RouterLink to="/"><AppIcon name="home" />首页</RouterLink>
           <RouterLink to="/recognition"><AppIcon name="microphone" />哼唱识曲</RouterLink>
+          <RouterLink to="/qq-playlists">QQ歌单</RouterLink>
           <RouterLink to="/upload"><AppIcon name="upload" />上传</RouterLink>
           <RouterLink to="/assistant"><AppIcon name="robot" />AI助手</RouterLink>
           <RouterLink to="/feedback"><AppIcon name="chat" />反馈</RouterLink>

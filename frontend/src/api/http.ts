@@ -26,7 +26,7 @@ export async function jsonRequest<T>(
   }
   if (!response.ok) {
     let detail: string | undefined;
-    if ([400, 403, 404, 409, 429, 503].includes(response.status)) {
+    if ([400, 403, 404, 409, 422, 429, 503].includes(response.status)) {
       try {
         const body = await response.json() as { message?: unknown };
         if (typeof body.message === "string" && body.message.length <= 300) detail = body.message;

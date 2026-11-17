@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { usePlayerStore } from "../stores/player";
 import CoverArt from "../components/CoverArt.vue";
+import { songKey } from "../types";
 const player = usePlayerStore();
 </script>
 <template>
@@ -22,7 +23,7 @@ const player = usePlayerStore();
     <ol v-else class="queue-list">
       <li
         v-for="(song, i) in player.queue"
-        :key="song.songId"
+        :key="songKey(song)"
         :class="{ active: player.index === i }"
       >
         <span class="row-number">{{ i + 1 }}</span

@@ -10,7 +10,7 @@
 | [新前端](frontend/README.md) | Vue 3、TypeScript、Vite、Vue Router、Pinia、HLS.js | 公开搜索、账号与个人中心、收藏、评论、上传、识曲、歌词与常驻播放器 |
 | [独立后端](backend/README.md) | Java 21、Spring Boot 4.1.2、JDBC | 公开搜索、账号与持久会话、收藏、评论、资料、音乐人、上传、识曲与 HLS |
 
-新前端的音乐业务 API 与媒体请求均已接入独立后端。邮件和第三方识曲需要配置外部服务；媒体需配置独立存储、旧资源只读根目录与 FFmpeg。推荐、歌单与 AI 演示不代表完整后端能力；反馈目前支持本机导出，第三方 OAuth 尚未接入。
+新前端的音乐业务 API 与媒体请求均已接入独立后端。邮件和第三方识曲需要配置外部服务；媒体需配置独立存储、旧资源只读根目录与 FFmpeg。推荐与 AI 演示不代表完整后端能力；反馈目前支持本机导出，第三方 OAuth 尚未接入。已登录用户可连接 QQ 音乐账号，读取并导入歌单、加载队列及播放，需配置[可选 QQ 音乐服务](deploy/qq-music-api/README.md)；QQ 曲库搜索尚未接入。
 
 历史学习版本见 [v1.0.0](https://github.com/xgx2025/LvDong-Music/tree/v1.0.0)。
 

@@ -70,3 +70,4 @@ docs/
 /backend/openapi.yaml
 /backend/storage/
 /frontend/tests/*.py
+/deploy/qq-music-api/.auth-state/

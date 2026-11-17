@@ -66,7 +66,8 @@ const time = (value: number) =>
       </p>
       <p v-if="p.current?.albumName" class="playing-album">{{ p.current.albumName }}</p>
       <LyricsPanel :path="p.current?.lyricUrl" />
-      <RouterLink v-if="p.current" :to="`/song/${p.current.songId}`" @click="p.expanded = false"><AppIcon name="chat" />查看歌曲与评论</RouterLink>
+      <RouterLink v-if="p.current && p.current.provider !== 'qq'" :to="`/song/${p.current.songId}`" @click="p.expanded = false"><AppIcon name="chat" />查看歌曲与评论</RouterLink>
+      <p v-if="p.current?.provider === 'qq'">QQ 音乐{{ p.preview ? ' · 试听片段' : '' }}</p>
     </div>
     <div class="player-row">
       <button

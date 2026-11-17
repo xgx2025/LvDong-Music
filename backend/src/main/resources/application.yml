@@ -35,6 +35,9 @@ spring:
     deserialization:
       fail-on-unknown-properties: false
 app:
+  qq-music:
+    api-base: ${QQ_MUSIC_API_BASE:}
+    connection-key: ${QQ_MUSIC_CONNECTION_KEY:}
   mail:
     from: ${SMTP_FROM:${SMTP_USER:}}
   storage:

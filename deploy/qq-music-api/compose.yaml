@@ -1,0 +1,15 @@
+services:
+  qq-music-api:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3200:3200"
+    environment:
+      QQ_AUTH_STATE_PATH: /app/.auth-state/device.json
+      QQ_AUTH_SESSION_PATH: /app/.auth-state/sessions.enc
+      QQ_SESSION_SECRET: ${QQ_SESSION_SECRET:?Set QQ_SESSION_SECRET in .env}
+      LOG_LEVEL: warn
+    volumes:
+      - qq-state:/app/.auth-state
+volumes:
+  qq-state:
