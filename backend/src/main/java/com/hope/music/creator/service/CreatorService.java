@@ -3,6 +3,8 @@ package com.hope.music.creator.service;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.hope.music.creator.dao.CreatorDao;
 import com.hope.music.library.service.LibraryService;
+import com.hope.music.media.domain.event.UploadedAudioEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import com.hope.music.storage.service.FileStorageService;
 import com.hope.music.storage.service.FileStorageService.FilePayload;
 import org.springframework.dao.DuplicateKeyException;
@@ -17,7 +19,8 @@ import java.util.*;
 public class CreatorService {
     private final CreatorDao dao;
     private final FileStorageService storage;
-    public CreatorService(CreatorDao dao, FileStorageService storage) { this.dao=dao; this.storage=storage; }
+    private final ApplicationEventPublisher events;
+    public CreatorService(CreatorDao dao, FileStorageService storage, ApplicationEventPublisher events) { this.dao=dao; this.storage=storage; this.events=events; }
     @JsonIgnoreProperties(ignoreUnknown=true)
     public record ProfileDTO(String username,String gender,String bio,String avatarBase64) { }
     @JsonIgnoreProperties(ignoreUnknown=true)
@@ -63,6 +66,7 @@ public class CreatorService {
         var lyric=body.lyricFile()==null?null:storage.save(body.lyricFile(),"lyric",false);
         String songId=String.valueOf(UUID.randomUUID().getMostSignificantBits()&Long.MAX_VALUE);
         dao.insertSong(songId,name,body.duration(),album,audio.path().toString(),cover.url(),lyric==null?null:lyric.url(),singers);
+        events.publishEvent(new UploadedAudioEvent(songId, audio.path().toString()));
         return Map.of("success",true,"songId",songId);
     }
 }

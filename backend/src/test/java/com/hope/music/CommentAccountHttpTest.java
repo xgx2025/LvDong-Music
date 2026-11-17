@@ -33,6 +33,7 @@ class CommentAccountHttpTest {
         catch(java.io.IOException ex) { throw new ExceptionInInitializerError(ex); }
     }
     @DynamicPropertySource static void storage(DynamicPropertyRegistry registry) {
+        registry.add("app.storage.legacy-mirror-root",()->"");
         registry.add("app.storage.root",()->FILES.resolve("new").toString());
         registry.add("app.storage.legacy-root",()->FILES.resolve("legacy").toString());
         registry.add("app.storage.legacy-audio-root",()->FILES.resolve("legacy").toString());
@@ -41,6 +42,8 @@ class CommentAccountHttpTest {
     @LocalServerPort int port;
     @Autowired JdbcTemplate jdbc;
     @Autowired FakeMail mail;
+    @Autowired com.hope.music.creator.service.CreatorService creator;
+    @Autowired org.springframework.transaction.PlatformTransactionManager transactions;
     final HttpClient client = HttpClient.newHttpClient();
     final JsonMapper mapper = JsonMapper.builder().build();
     static class FakeMail implements VerificationMailSender {
@@ -287,6 +290,36 @@ class CommentAccountHttpTest {
         assertThat(ok("recognition",Map.of("text","lyrics"),token).has("data")).isFalse();
         assertThat(post("recognition",Map.of("text",""),token).statusCode()).isEqualTo(400);
         assertThat(post("recognition",Map.of("text","lyrics"),null).statusCode()).isEqualTo(401);
+    }
+    @Test void rolledBackUploadDoesNotStartPreprocessing() throws Exception {
+        approve();long before=countFiles();var body=uploadBody();
+        var music=(Map<?,?>)body.get("musicFile");var cover=(Map<?,?>)body.get("coverImage");
+        var request=new com.hope.music.creator.service.CreatorService.UploadDTO("rollback","9007199254740993","00:03","single",
+                new com.hope.music.storage.service.FileStorageService.FilePayload((String)music.get("name"),(String)music.get("type"),(String)music.get("data")),
+                new com.hope.music.storage.service.FileStorageService.FilePayload((String)cover.get("name"),(String)cover.get("type"),(String)cover.get("data")),null);
+        String id=new org.springframework.transaction.support.TransactionTemplate(transactions).execute(status->{
+            var result=(Map<?,?>)creator.upload("9007199254740993",request);status.setRollbackOnly();return (String)result.get("songId");
+        });
+        assertThat(countFiles()).isEqualTo(before);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM songs WHERE id=?",Long.class,id)).isZero();
+        assertThat(FILES.resolve("hls").resolve(id)).doesNotExist();
+    }
+    @Test
+    @org.junit.jupiter.api.condition.EnabledIfSystemProperty(named="media.regression",matches="true")
+    void committedUploadsArePreprocessedButHiddenUntilApproved() throws Exception {
+        String token=login("tester@example.test");approve();
+        String id=ok("creator/upload",uploadBody(),token).path("songId").asString();
+        var manifest=FILES.resolve("hls").resolve(id).resolve("index.m3u8");
+        for(int i=0;i<150&&!java.nio.file.Files.exists(manifest);i++)Thread.sleep(100);
+        assertThat(com.hope.music.media.service.HlsProcessor.isReady(manifest.getParent())).isTrue();
+        String endpoint="/api/v1/media/hls?action=serveHls&songId="+id+"&fileName=index.m3u8";
+        assertThat(get(endpoint,token).statusCode()).isEqualTo(404);
+        assertThat(get("/api/v1/media/hls?action=checkStatus&songId="+id,token).statusCode()).isEqualTo(404);
+        var modified=java.nio.file.Files.getLastModifiedTime(manifest);
+        jdbc.update("UPDATE songs SET state=1 WHERE id=?",id);
+        assertThat(mapper.readTree(get("/api/v1/media/hls?action=checkStatus&songId="+id,token).body()).path("state").asString()).isEqualTo("READY");
+        assertThat(get(endpoint,token).statusCode()).isEqualTo(200);
+        assertThat(java.nio.file.Files.getLastModifiedTime(manifest)).isEqualTo(modified);
     }
     @Test
     @org.junit.jupiter.api.condition.EnabledIfSystemProperty(named="media.regression",matches="true")

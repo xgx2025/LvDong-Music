@@ -98,9 +98,10 @@ Boot 使用安全随机的不透明双令牌，只存 SHA-256 摘要。access �
 - `STORAGE_ROOT`：新音频、公开图片/歌词及私有申请材料的独立目录。客户端文件名不参与路径生成；失败只清理本次创建的文件，不覆盖现有文件。
 - `LEGACY_STORAGE_ROOT`：已有图片和歌词的根目录，应包含 `static/`，仅用于只读访问。
 - `LEGACY_AUDIO_ROOT`：旧音频目录；未配置时沿用 `LEGACY_STORAGE_ROOT`。现有歌曲 audio_url 应指向该目录中的有效文件；不会自动复制或改写旧库路径。
+- `LEGACY_MIRROR_ROOT`：可选的已校验旧资源副本，内部为 `assets/static/` 和 `audio/`；优先读取副本，缺失时回退旧目录。保留旧根配置作为音频相对路径映射依据，无需改写数据库中的历史路径。副本应在切换前逐文件校验，原资源不自动删除。
 - `HLS_ROOT_DIR`：全新的转换输出目录，禁止配置为现有旧站HLS目录；`FFMPEG_PATH` 指定可执行文件。
 
-`GET /api/v1/assets/...` 仅提供白名单图片和歌词，身份证材料及原始音频不公开。HLS通过 `/api/v1/media/hls?action=processMp3|checkStatus|serveHls` 访问，清单、密钥、切片均验证会话及歌曲审核状态。切片支持Range；原生HLS的查询令牌会传播至子请求，部署时使用HTTPS且避免记录查询凭证。转换保留有界队列、同歌去重、完整VOD和原子发布；当前仍在首次播放时转换，单实例协调，不自动回收历史转换文件。
+`GET /api/v1/assets/...` 仅提供白名单图片和歌词，身份证材料及原始音频不公开。HLS通过 `/api/v1/media/hls?action=processMp3|checkStatus|serveHls` 访问，清单、密钥、切片均验证会话及歌曲审核状态。切片支持Range；原生HLS的查询令牌会传播至子请求，部署时使用HTTPS且避免记录查询凭证。转换保留有界队列、同歌去重、完整VOD和原子发布；新上传在数据库事务提交后自动进入有界转码队列，回滚不会转码；待审核歌曲即使已转码也不能公开读取。排队或转换失败不改变已成功提交的上传结果，审核发布后播放可重试；既有歌曲仍可在首次播放时按需转换。当前为单实例协调，不自动回收历史转换文件。
 
 `mvn -f backend/pom.xml verify` 执行隔离数据库与HTTP回归；已安装FFmpeg时使用 `-Pmedia-regression` 额外验证真实转换、长音频、解码、失败重试和鉴权。隔离邮件/识曲替身不代表真实投递或外部服务验收，真实MySQL、Safari和部署拓扑仍需联调。
 

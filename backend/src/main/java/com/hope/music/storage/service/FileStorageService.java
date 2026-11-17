@@ -16,10 +16,13 @@ public class FileStorageService {
     private final String root;
     private final String legacy;
     private final String legacyAudio;
+    private final String legacyMirror;
     public FileStorageService(@Value("${app.storage.root:}") String root,
             @Value("${app.storage.legacy-root:}") String legacy,
-            @Value("${app.storage.legacy-audio-root:${app.storage.legacy-root:}}") String legacyAudio) {
+            @Value("${app.storage.legacy-audio-root:${app.storage.legacy-root:}}") String legacyAudio,
+            @Value("${app.storage.legacy-mirror-root:}") String legacyMirror) {
         this.root = root; this.legacy = legacy; this.legacyAudio = legacyAudio.isBlank() ? legacy : legacyAudio;
+        this.legacyMirror = legacyMirror;
     }
     public record FilePayload(String name, String type, String data) { }
     public record SavedFile(Path path, String url) { }
@@ -90,15 +93,32 @@ public class FileStorageService {
     }
     public Path legacyFile(String relative) throws IOException {
         if (!relative.matches("static/(?:images/(?:userAvatars|singerAvatars|songCovers)/[A-Za-z0-9_.-]+\\.(?:png|jpg|jpeg|webp|gif)|lrc/[A-Za-z0-9_-]+\\.lrc)")) throw bad();
-        return contained(legacy, relative);
+        Path mirrored = mirrored("assets/" + relative);
+        return mirrored == null ? contained(legacy, relative) : mirrored;
     }
     public Path audioFile(String input) throws IOException {
         if (input == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        if (!legacyAudio.isBlank()) {
+            Path original = Path.of(legacyAudio).toAbsolutePath().normalize();
+            Path requested = Path.of(input).toAbsolutePath().normalize();
+            if (requested.startsWith(original)) {
+                Path mirrored = mirrored("audio/" + original.relativize(requested).toString());
+                if (mirrored != null) return mirrored;
+            }
+        }
         Path path = Path.of(input).toRealPath();
         for (String configured : List.of(root, legacyAudio)) {
             if (!configured.isBlank() && path.startsWith(Path.of(configured).toRealPath()) && Files.isRegularFile(path)) return path;
         }
         throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+    }
+    private Path mirrored(String relative) throws IOException {
+        if (legacyMirror.isBlank()) return null;
+        Path base = Path.of(legacyMirror).toAbsolutePath().normalize();
+        Path candidate = base.resolve(relative).normalize();
+        if (!candidate.startsWith(base)) throw bad();
+        if (!Files.exists(candidate)) return null;
+        return contained(legacyMirror, relative);
     }
     private Path contained(String configured, String relative) throws IOException {
         if (configured.isBlank()) throw new ResponseStatusException(HttpStatus.NOT_FOUND);

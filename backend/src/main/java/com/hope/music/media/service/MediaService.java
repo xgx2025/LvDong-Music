@@ -11,6 +11,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 /** Independent bounded HLS tasks write exclusively to the configured new output root. */
 @Service
@@ -26,11 +27,20 @@ public class MediaService {
     private Path directory(String songId) throws IOException {
         LibraryService.id(songId);
         if (dao.source(songId)==null) throw new ResponseStatusException(HttpStatus.NOT_FOUND,"歌曲不可播放");
+        return outputDirectory(songId);
+    }
+    private Path outputDirectory(String songId) throws IOException {
+        LibraryService.id(songId);
         if(root.isBlank())throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,"媒体存储尚未配置");
         Path base=Path.of(root).toAbsolutePath().normalize(); Files.createDirectories(base);base=base.toRealPath();
         Path dir=base.resolve(songId);Files.createDirectories(dir);
         if(!dir.toRealPath().startsWith(base))throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         return dir;
+    }
+    // Internal committed-upload path; public status/files still require an approved song.
+    public CompletableFuture<Void> preprocessUploaded(String id, String source) throws IOException {
+        Path input = storage.audioFile(source), dir = outputDirectory(id);
+        return processor.convertToHls(input.toString(), dir.toString(), 10, 0, id);
     }
     public Object prepare(String id) throws IOException {
         Path dir=directory(id), input=storage.audioFile(dao.source(id));
