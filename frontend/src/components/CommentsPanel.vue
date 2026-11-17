@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { nextTick, onMounted, onBeforeUnmount, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { useSessionStore } from "../stores/session";
 import { comments, publishComment, likeComment, type Comment } from "../api/comments";
@@ -7,6 +7,22 @@ import { errorText } from "../api/servlet";
 const props = defineProps<{ songId: string }>();
 const session = useSessionStore(), route = useRoute();
 const list = ref<Comment[]>([]), page = ref(1), total = ref(0), hot = ref(false), content = ref(""), reply = ref<Comment>(), error = ref(""), loading = ref(false), sending = ref(false), pending = ref<Record<string, boolean>>({});
+const emojiOpen = ref(false), emojiCategory = ref(0), editor = ref<HTMLTextAreaElement>();
+const emojiControl = ref<HTMLElement>();
+function closeEmoji(event: PointerEvent) { if (event.target instanceof Node && !emojiControl.value?.contains(event.target)) emojiOpen.value = false; }
+onMounted(() => document.addEventListener('pointerdown', closeEmoji));
+onBeforeUnmount(() => document.removeEventListener('pointerdown', closeEmoji));
+const emojiGroups = [
+  { name: '表情', items: ['😀','😊','😂','🥰','😍','😎','😭','🥺','🤔','🤗','😴','🥳','😢','😮'] },
+  { name: '手势', items: ['👍','👏','🙌','🤝','✌️','💪','🙏'] },
+  { name: '音乐', items: ['🎵','🎶','🎤','🎧','🎸','🎹','🥁','🎻','❤️','💙','🔥'] },
+];
+async function insertEmoji(emoji: string) {
+  const field = editor.value, start = field?.selectionStart ?? content.value.length, end = field?.selectionEnd ?? start;
+  if (content.value.length - (end - start) + emoji.length > 500) return;
+  content.value = content.value.slice(0, start) + emoji + content.value.slice(end);
+  await nextTick(); field?.focus(); field?.setSelectionRange(start + emoji.length, start + emoji.length);
+}
 let version = 0;
 let replyPages: Record<string, number> = {};
 async function load() {
@@ -54,10 +70,10 @@ async function replies(item: Comment) {
 }
 </script>
 <template>
-  <section class="comments-panel"><div class="section-heading"><h2>全部评论</h2><select v-if="session.authenticated" v-model="hot" aria-label="评论排序"><option :value="false">最新评论</option><option :value="true">热门评论</option></select></div>
+  <section class="comments-panel" @keydown.esc="emojiOpen = false"><div class="section-heading"><h2>全部评论 <span class="comment-count">({{ total }})</span></h2><select v-if="session.authenticated" v-model="hot" aria-label="评论排序"><option :value="false">最新评论</option><option :value="true">热门评论</option></select></div>
     <p v-if="!session.authenticated"><RouterLink :to="{ path: '/login', query: { redirect: route.fullPath } }">登录后查看和发表评论</RouterLink></p>
     <template v-else>
-      <form class="form-stack" @submit.prevent="send"><p v-if="reply">回复 {{ reply.username }} <button type="button" @click="reply = undefined">取消回复</button></p><label>发表评论<textarea v-model="content" required maxlength="500" rows="3" placeholder="分享你的听歌感受…"></textarea></label><button class="primary" type="submit" :disabled="sending || !content.trim()">{{ sending ? '发表中…' : '发表评论' }}</button></form>
+      <form class="form-stack" @submit.prevent="send"><p v-if="reply">回复 {{ reply.username }} <button type="button" @click="reply = undefined">取消回复</button></p><label>发表评论<textarea ref="editor" v-model="content" required maxlength="500" rows="3" placeholder="分享你的听歌感受…"></textarea></label><div class="comment-composer-tools"><div ref="emojiControl" class="emoji-control" @keydown.esc="emojiOpen = false"><button type="button" :aria-expanded="emojiOpen" aria-controls="comment-emojis" @click="emojiOpen = !emojiOpen">表情</button><div v-if="emojiOpen" id="comment-emojis" class="emoji-picker"><div class="emoji-categories"><button v-for="(group, i) in emojiGroups" :key="group.name" type="button" :aria-pressed="emojiCategory === i" @click="emojiCategory = i">{{ group.name }}</button><button type="button" aria-label="关闭表情" @click="emojiOpen = false">×</button></div><div class="emoji-grid"><button v-for="emoji in emojiGroups[emojiCategory]?.items" :key="emoji" type="button" @mousedown.prevent @click="insertEmoji(emoji)">{{ emoji }}</button></div></div></div><small>{{ content.length }}/500</small></div><button class="primary" type="submit" :disabled="sending || !content.trim()">{{ sending ? '发表中…' : '发表评论' }}</button></form>
       <p v-if="error" class="form-error" role="alert">{{ error }} <button @click="load">重新加载评论</button></p>
       <p v-if="loading" role="status">正在加载评论…</p>
       <p v-else-if="!list.length">还没有评论</p>

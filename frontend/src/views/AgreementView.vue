@@ -3,6 +3,8 @@ import service from "../content/agreements/service.html?raw";
 import privacy from "../content/agreements/privacy.html?raw";
 import musician from "../content/agreements/musician.html?raw";
 import musicianPrivacy from "../content/agreements/musician-privacy.html?raw";
+import { useSessionStore } from "../stores/session";
+const session = useSessionStore();
 defineProps<{ kind: string }>();
 // These documents are fixed, reviewed source assets, never server or user HTML.
 const documents: Record<string, string> = { service, privacy, musician, "musician-privacy": musicianPrivacy };
@@ -10,6 +12,6 @@ const documents: Record<string, string> = { service, privacy, musician, "musicia
 <template>
   <section class="content-page agreement-page">
     <article class="agreement-document" v-html="documents[kind]"></article>
-    <RouterLink to="/">返回首页</RouterLink>
+    <RouterLink :to="session.authenticated ? '/' : '/login'">{{ session.authenticated ? '返回首页' : '返回登录' }}</RouterLink>
   </section>
 </template>

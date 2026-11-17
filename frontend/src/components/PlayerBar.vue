@@ -1,16 +1,20 @@
 <script setup lang="ts">
-import { computed, onMounted, onBeforeUnmount } from "vue";
+import { computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { useRoute } from "vue-router";
 import { usePlayerStore } from "../stores/player";
 import { useSessionStore } from "../stores/session";
 import { coverUrl } from "../api/legacy";
+import AppIcon from "./AppIcon.vue";
 import CoverArt from "./CoverArt.vue";
+import FavoriteButton from "./FavoriteButton.vue";
 import LyricsPanel from "./LyricsPanel.vue";
 const p = usePlayerStore();
 const session = useSessionStore(), route = useRoute();
 const background = computed(() => coverUrl(p.current?.coverUrl || null));
 const loginLink = computed(() => ({ path: "/login", query: { redirect: route.fullPath } }));
+watch(() => route.fullPath, () => { p.expanded = false; });
 function keyboard(event: KeyboardEvent) {
+  if (event.key === 'Escape' && p.expanded && !document.querySelector('dialog[open]')) { p.expanded = false; event.preventDefault(); return; }
   if (event.code !== "Space" || event.repeat || event.isComposing || event.defaultPrevented
     || event.ctrlKey || event.altKey || event.metaKey || event.shiftKey || route.meta.authLayout || !p.queue.length) return;
   if (event.target instanceof HTMLElement && event.target.closest('input, textarea, select, button, a, [contenteditable], [role="textbox"], [role="slider"]')) return;
@@ -26,14 +30,14 @@ const time = (value: number) =>
 </script>
 <template>
   <section
+    :aria-label="p.expanded ? '正在播放' : '常驻播放器'"
     class="player"
-    aria-label="常驻播放器"
     :class="{ expanded: p.expanded }"
   >
     <img v-if="p.expanded && background" :src="background" alt="" aria-hidden="true" class="player-cover-background" referrerpolicy="no-referrer" />
     <div v-if="p.expanded" class="now-playing">
-      <p class="eyebrow">NOW PLAYING</p>
-      <CoverArt :path="p.current?.coverUrl" :name="p.current?.songName" />
+      <div class="expanded-player-heading"><button aria-label="收起播放器" @click="p.expanded = false">收起</button><span>律动</span><FavoriteButton v-if="p.current" :song-id="p.current.songId" /></div>
+      <button class="player-artwork" :class="{ playing: p.playing }" :aria-label="p.playing ? '暂停当前歌曲' : '播放当前歌曲'" :disabled="!p.current" @click="p.toggle()"><CoverArt :path="p.current?.coverUrl" :name="p.current?.songName" /><span class="artwork-play" aria-hidden="true"><AppIcon :name="p.playing ? 'pause' : 'play'" /></span></button>
       <h2>{{ p.current?.songName || "下一首，留给你选择" }}</h2>
       <p>
         {{
@@ -41,8 +45,9 @@ const time = (value: number) =>
           "从搜索结果加入一首喜欢的歌"
         }}
       </p>
+      <p v-if="p.current?.albumName" class="playing-album">{{ p.current.albumName }}</p>
       <LyricsPanel :path="p.current?.lyricUrl" />
-      <RouterLink v-if="p.current" :to="`/song/${p.current.songId}`">查看歌曲与评论</RouterLink>
+      <RouterLink v-if="p.current" :to="`/song/${p.current.songId}`" @click="p.expanded = false">查看歌曲与评论</RouterLink>
     </div>
     <div class="player-row">
       <button
@@ -69,20 +74,20 @@ const time = (value: number) =>
             :disabled="!p.queue.length"
             @click="p.previous()"
           >
-            Ⅰ◀</button
+            <AppIcon name="previous" /></button
           ><button
             class="play-button"
             :aria-label="p.busy ? '取消准备' : p.playing ? '暂停' : '播放'"
             :disabled="!p.queue.length"
             @click="p.toggle()"
           >
-            {{ p.busy ? "■" : p.playing ? "Ⅱ" : "▶" }}</button
+            <AppIcon :name="p.busy ? 'stop' : p.playing ? 'pause' : 'play'" /></button
           ><button
             aria-label="下一首"
             :disabled="!p.queue.length"
             @click="p.next()"
           >
-            ▶Ⅰ
+            <AppIcon name="next" />
           </button>
         </div>
         <label class="timeline"

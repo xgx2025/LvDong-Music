@@ -1,12 +1,22 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useSessionStore } from "../stores/session";
 import { updateProfile, musicianStatus, readFile, getProfile, getFavorites } from "../api/account";
 import { errorText } from "../api/servlet";
 import { coverUrl } from "../api/legacy";
 const session = useSessionStore(), router = useRouter();
-const dialog = ref<HTMLDialogElement>();
+const dialog = ref<HTMLDialogElement>(), avatarInput = ref<HTMLInputElement>();
+const avatarReading = ref(false);
+let avatarGeneration = 0;
+onBeforeUnmount(() => avatarGeneration++);
+function closed() { avatarGeneration++; avatarReading.value = false; }
+function close() { if (!busy.value) dialog.value?.close(); }
+function backdrop(event: MouseEvent) {
+  if (event.target !== dialog.value) return;
+  const rect = dialog.value.getBoundingClientRect();
+  if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) close();
+}
 const status = ref(""), statusError = ref(""), busy = ref(false), error = ref(""), notice = ref("");
 const favoriteCount = ref<number>();
 const draft = reactive({ username: "", gender: "未知", bio: "", avatarBase64: "" });
@@ -24,16 +34,21 @@ onMounted(async () => {
 });
 function edit() {
   Object.assign(draft, { username: session.user?.username || "", gender: session.user?.gender || "未知", bio: session.user?.bio || "", avatarBase64: "" });
+  avatarGeneration++; avatarReading.value = false;
+  if (avatarInput.value) avatarInput.value.value = "";
   error.value = ""; dialog.value?.showModal();
 }
 async function avatarChange(event: Event) {
   const file = (event.target as HTMLInputElement).files?.[0];
   if (!file) return;
-  try { draft.avatarBase64 = (await readFile(file, "image")).data; }
-  catch (e) { error.value = errorText(e); (event.target as HTMLInputElement).value = ""; }
+  const version = ++avatarGeneration;
+  avatarReading.value = true; error.value = "";
+  try { const result = await readFile(file, "image"); if (version === avatarGeneration) draft.avatarBase64 = result.data; }
+  catch (e) { if (version === avatarGeneration) { error.value = errorText(e); (event.target as HTMLInputElement).value = ""; } }
+  finally { if (version === avatarGeneration) avatarReading.value = false; }
 }
 async function save() {
-  if (busy.value) return;
+  if (busy.value || avatarReading.value) return;
   error.value = ""; busy.value = true;
   try {
     const result = await updateProfile({ ...draft, username: draft.username.trim() });
@@ -67,15 +82,15 @@ const date = computed(() => {
       <div class="profile-actions"><button @click="logout">退出登录</button><RouterLink class="orange-button" to="/musician">{{ status === 'approved' ? '音乐人资料' : '申请成为音乐人' }}</RouterLink><button class="primary" @click="edit">编辑资料</button></div>
       <div class="profile-shortcuts"><RouterLink to="/favorites">我的收藏</RouterLink><RouterLink to="/upload">上传音乐</RouterLink></div>
     </div>
-    <dialog ref="dialog" class="profile-dialog" @cancel="busy && $event.preventDefault()">
-      <form class="form-stack" @submit.prevent="save"><h2>编辑个人资料</h2>
-        <label>头像<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" :disabled="busy" @change="avatarChange" /></label>
-        <img v-if="draft.avatarBase64" class="avatar-preview" :src="draft.avatarBase64" alt="新头像预览" />
+    <dialog ref="dialog" class="profile-dialog" aria-labelledby="edit-profile-title" @click="backdrop" @close="closed" @cancel="busy && $event.preventDefault()">
+      <button class="dialog-close" type="button" aria-label="关闭资料编辑" :disabled="busy" @click="close">×</button>
+      <form class="form-stack" @submit.prevent="save"><div class="dialog-heading"><h2 id="edit-profile-title">编辑个人资料</h2><p>更新你的个人信息</p></div>
+        <div class="profile-avatar-editor"><div class="profile-avatar"><img v-if="draft.avatarBase64 || avatar" :src="draft.avatarBase64 || avatar!" alt="头像预览" /><span v-else>{{ draft.username.slice(0, 1) }}</span></div><label class="avatar-upload-control">更换头像<input ref="avatarInput" type="file" class="sr-only" aria-label="头像" accept="image/png,image/jpeg,image/webp,image/gif" :disabled="busy" @change="avatarChange" /></label><small>{{ avatarReading ? '正在读取头像…' : '支持PNG、JPG、WebP或GIF，最大3MB' }}</small></div>
         <label>用户名<input v-model="draft.username" required minlength="2" maxlength="20" :disabled="busy" /></label>
         <label>性别<select v-model="draft.gender" :disabled="busy"><option>未知</option><option>男</option><option>女</option></select></label>
-        <label>个人简介<textarea v-model="draft.bio" maxlength="200" rows="4" :disabled="busy"></textarea><small>{{ draft.bio.length }}/200</small></label>
+        <label>个人简介<textarea aria-label="个人简介" v-model="draft.bio" maxlength="200" rows="4" :disabled="busy"></textarea><small>{{ draft.bio.length }}/200</small></label>
         <p v-if="error" role="alert" class="form-error">{{ error }}</p>
-        <div class="button-group"><button type="button" :disabled="busy" @click="dialog?.close()">取消</button><button class="primary" :disabled="busy" type="submit">{{ busy ? '保存中…' : '保存资料' }}</button></div>
+        <div class="button-group"><button type="button" :disabled="busy" @click="close">取消</button><button class="primary" :disabled="busy || avatarReading" type="submit">{{ busy ? '保存中…' : '保存资料' }}</button></div>
       </form>
     </dialog>
   </section>

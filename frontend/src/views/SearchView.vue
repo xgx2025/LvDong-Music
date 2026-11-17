@@ -1,9 +1,11 @@
 <script setup lang="ts">
+function scrollToSongs() { document.getElementById("search")?.scrollIntoView({ behavior: "smooth" }); }
 import { onBeforeUnmount, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { search } from "../api/search";
 import type { SearchResult, Song } from "../types";
 import { usePlayerStore } from "../stores/player";
+import HomeDiscovery from "../components/HomeDiscovery.vue";
 import CoverArt from "../components/CoverArt.vue";
 import FavoriteButton from "../components/FavoriteButton.vue";
 import { useFavoritesStore } from "../stores/favorites";
@@ -12,6 +14,7 @@ const favorites = useFavoritesStore(), session = useSessionStore();
 const route = useRoute(),
   router = useRouter(),
   player = usePlayerStore();
+const category = ref("songs");
 const keyword = ref(""),
   result = ref<SearchResult>(),
   loading = ref(false),
@@ -24,6 +27,7 @@ async function load() {
   request?.abort();
   request = new AbortController();
   const active = request;
+  category.value = ["songs", "artists", "albums", "playlists"].includes(String(route.query.category)) ? String(route.query.category) : "songs";
   keyword.value = String(route.query.q || "").slice(0, 200);
   loading.value = true;
   error.value = "";
@@ -38,10 +42,13 @@ async function load() {
     if (request === active) loading.value = false;
   }
 }
-function submit() {
-  void router.push({ path: "/", query: { q: keyword.value.trim() } });
-  if ((route.query.q || "") === keyword.value.trim() && !route.query.page)
-    void load();
+function tabKey(event: KeyboardEvent, selected: string) {
+  const keys = ['songs', 'albums', 'artists', 'playlists'];
+  const direction = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+  if (!direction && !['Home', 'End'].includes(event.key)) return;
+  event.preventDefault();
+  category.value = keys[event.key === 'Home' ? 0 : event.key === 'End' ? 3 : (keys.indexOf(selected) + direction + 4) % 4]!;
+  document.getElementById(`tab-${category.value}`)?.focus();
 }
 function page(delta: number) {
   void router.push({ query: { ...route.query, page: pageNumber() + delta } });
@@ -57,9 +64,9 @@ watch(() => [result.value, session.authenticated], () => {
 onBeforeUnmount(() => request?.abort());
 </script>
 <template>
-  <template v-if="!route.query.q">
+  <template v-if="!route.query.q && !route.query.category">
     <section class="welcome">
-      <h1>嗨，<span>音乐爱好者</span></h1>
+      <h1>嗨，<span>{{ session.user?.username || "音乐爱好者" }}</span></h1>
       <p>今日为你推荐这些好音乐</p>
     </section>
     <section class="home-banner">
@@ -69,24 +76,18 @@ onBeforeUnmount(() => request?.abort());
         <h2>夏日限定 · 清凉节奏</h2>
         <p>32首适合夏日聆听的轻快旋律，陪你度过炎热午后</p>
       </div>
+      <a class="banner-play" href="#" @click.prevent="scrollToSongs" aria-label="浏览推荐歌曲">▶</a>
     </section>
+    <HomeDiscovery />
   </template>
   <section id="search" class="search-section">
     <div class="section-heading">
-      <h2>{{ route.query.q ? '搜索结果' : '最新歌曲' }}</h2>
+      <h2>{{ route.query.q || route.query.category ? '搜索结果' : '最新歌曲' }}</h2>
     </div>
-    <Teleport to="#header-search">
-    <form class="search-form" @submit.prevent="submit">
-      <label for="keyword" class="sr-only">歌曲、歌手或专辑关键词</label
-      ><input
-        id="keyword"
-        v-model="keyword"
-        maxlength="200"
-        placeholder="搜索歌曲、歌手或专辑名称"
-        type="search"
-      /><button class="primary" type="submit">搜索音乐</button>
-    </form>
-    </Teleport>
+
+    <div v-if="route.query.q || route.query.category" class="search-tabs" role="tablist" aria-label="搜索分类">
+      <button v-for="tab in [{ key: 'songs', name: '歌曲', count: result?.songCount }, { key: 'albums', name: '专辑', count: result?.albumCount }, { key: 'artists', name: '歌手', count: result?.singerCount }, { key: 'playlists', name: '歌单', count: result?.playlistCount }]" :id="`tab-${tab.key}`" :key="tab.key" role="tab" :aria-selected="category === tab.key" :tabindex="category === tab.key ? 0 : -1" @keydown="tabKey($event, tab.key)" aria-controls="search-results" @click="category = tab.key">{{ tab.name }}<span>({{ tab.count || 0 }})</span></button>
+    </div>
     <div class="results-heading">
       <span>{{ route.query.q ? `“${route.query.q}” 的搜索结果` : "已发布歌曲" }}</span
       ><span v-if="result">{{ result.songCount }} 首歌曲</span>
@@ -103,8 +104,14 @@ onBeforeUnmount(() => request?.abort());
       <button class="primary" @click="load">重试搜索</button
       ><span class="subtle">请稍后重试，或联系站点维护者。</span>
     </div>
-    <template v-else-if="result"
-      ><div v-if="!result.songs.length" class="empty-state">
+    <template v-else-if="result">
+      <div id="search-results" role="tabpanel" :aria-labelledby="route.query.q || route.query.category ? `tab-${category}` : undefined">
+      <div v-if="category === 'artists'" class="artist-results">
+        <article v-for="singer in result.singers" :key="singer.id" class="discovery-card artist-card"><CoverArt :path="singer.avatar" :name="singer.name" /><h3>{{ singer.name || '未知歌手' }}</h3><RouterLink :to="{ path: '/', query: { q: singer.name } }">查看歌曲</RouterLink></article>
+        <div v-if="!result.singers.length" class="empty-state"><h3>暂无相关歌手</h3><p>试试其他歌手名称。</p></div>
+      </div>
+      <div v-else-if="category !== 'songs'" class="empty-state"><h3>暂无相关{{ category === 'albums' ? '专辑' : '歌单' }}</h3><p>可以切换到歌曲分类继续查找。</p></div>
+      <template v-else><div v-if="!result.songs.length" class="empty-state">
         <h3>暂时没有找到歌曲</h3>
         <p>换一个歌名或歌手名试试看。</p>
       </div>
@@ -157,7 +164,8 @@ onBeforeUnmount(() => request?.abort());
           下一页
         </button>
       </div>
-      <section v-if="result.singers.length" class="singer-section">
+      </template></div>
+      <section v-if="category === 'songs' && result.singers.length" class="singer-section">
         <h3>相关歌手</h3>
         <div class="singer-list">
           <div v-for="singer in result.singers" :key="singer.id">
