@@ -1,6 +1,6 @@
 # 律动音乐 · 独立后端
 
-基于 Java 21 / Spring Boot 4.1.2 的分层单体，目前提供公开搜索、持久会话、本人收藏和歌曲详情。旧 Servlet WAR 在仓库根目录保留独立构建入口，新服务尚未替换整个旧站。
+基于 Java 21 / Spring Boot 4.1.2 的分层单体，提供搜索、持久会话、账号写入、收藏、歌曲详情、评论、资料编辑、音乐人申请、上传、歌词识曲与加密 HLS。旧 Servlet WAR 保留独立构建入口，Vue 音乐业务已全部切换到新服务。
 
 ## 当前能力
 
@@ -9,7 +9,7 @@
 - Controller → Service → JDBC DAO 分层，Service 管理查询快照与写入事务。
 - 参数校验、统一异常响应、字符串 ID 及当前页歌手批量查询。
 
-登录、刷新、退出和本人资料使用持久会话；媒体、账号其他写入、上传和评论仍由旧 WAR 提供。搜索统一按匿名处理，`userHasFavorite=false`；专辑和歌单结果暂为空。
+登录、刷新、退出和本人资料使用持久会话；其余账号写入、评论、文件业务与媒体也已迁入 Boot。搜索统一按匿名处理，`userHasFavorite=false`；专辑和歌单结果暂为空。
 
 ## 构建与运行
 
@@ -61,4 +61,44 @@ GET /api/v1/search?keyword=音乐&page=1&pageSize=20
 
 Boot 使用安全随机的不透明双令牌，只存 SHA-256 摘要。access 有效30分钟，refresh 固定7天；刷新签发新的 access，保留 refresh，退出通过任一凭证撤销整个会话及其所有 access。数据库校验失败时拒绝访问。旧 WAR 对 Boot access 执行共享表校验，覆盖业务、HLS清单、密钥和切片；旧刷新入口拒绝 Boot 凭证，旧退出入口也持久撤销 Boot 会话。旧 JWT 仍仅在旧 WAR 内签发、验证和进程内撤销，Boot不接受旧JWT。切换版本后已有标签页需重新登录。
 
-此桥接仅用于尚未迁移的 Servlet 业务；当这些业务和媒体全部迁入 Boot 后移除。媒体转换队列与文件存储仍属于 WAR。会话表过期记录清理、多实例容量、真实联合部署与跨进程重启验收尚未完成。
+共享会话桥接仅为仍运行的旧站保留，Vue 不再依赖它。会话表过期记录清理、多实例容量、真实部署与跨进程重启验收尚未完成。
+
+
+## 账号、评论与文件业务
+
+以下接口接收 POST JSON，成功沿用 `{success:true,...}`；本人身份只取自 Bearer 会话，忽略客户端 userId/singerId。
+
+| 路径 | 功能 |
+| --- | --- |
+| `/api/v1/account/verification-code` | 发送邮箱验证码 |
+| `/api/v1/account/verification` | 独立校验并消费验证码 |
+| `/api/v1/account/registration` | 注册：username、email、password、verificationCode |
+| `/api/v1/account/password-reset` | 重置：email、newPassword、verificationCode |
+| `/api/v1/comments/page`、`/count` | 歌曲评论与回复分页、评论总数 |
+| `/api/v1/comments`、`/comments/like` | 发布/回复、幂等点赞及取消 |
+| `/api/v1/creator/profile` | 本人资料与头像更新 |
+| `/api/v1/creator/status`、`/application` | 本人音乐人状态与申请 |
+| `/api/v1/creator/upload` | 审核通过的音乐人上传，歌曲初始为待审核 |
+| `/api/v1/recognition` | 歌词推断后匹配已发布曲库 |
+
+首次启用需在现有业务表上显式执行 [004_email_verifications.sql](src/main/resources/db/004_email_verifications.sql) 和 [005_musician_materials.sql](src/main/resources/db/005_musician_materials.sql)。收藏/评论联合唯一索引沿用旧库已有约束；这些增量脚本不初始化或覆盖业务数据。
+
+验证码摘要持久化，10分钟有效、60秒冷却、最多5次校验且成功后一次性消费。注册/重置直接提交验证码，不要预先调用独立校验接口。账号写入失败会回滚验证码消费，错误尝试仍会计数。当前沿用旧 users.email 的25字符限制；新密码至少8字符且UTF-8不超过72字节。重置成功撤销该账号全部 Boot 会话；旧站历史 JWT 不纳入此持久撤销域。
+
+评论暂支持歌曲资源 resourceType=1，分页和写入均检查歌曲已发布、评论有效及回复关系。点赞记录、计数和回复记录处于同一事务。
+
+## 外部服务与存储
+
+配置见 [`.env.example`](.env.example)，真实凭证仅填本地环境文件或系统环境变量。
+
+- 邮件使用 `SMTP_HOST/PORT/USER/PASSWORD/FROM`，默认465隐式TLS；587需启用STARTTLS并关闭隐式SSL。连接、读写均设超时，未配置或发送失败不会返回成功。
+- 识曲使用 `RECOGNITION_ENDPOINT/API_KEY/MODEL`，沿用星火HTTP推断方式，凭证不含Bearer前缀。识曲并非音频指纹识别，未配置返回503。
+- `STORAGE_ROOT`：新音频、公开图片/歌词及私有申请材料的独立目录。客户端文件名不参与路径生成；失败只清理本次创建的文件，不覆盖现有文件。
+- `LEGACY_STORAGE_ROOT`：已有静态资源与音频所在的共同根目录，仅用于只读访问。现有歌曲 audio_url 应指向此目录中的有效文件；不会自动复制或改写旧库路径。
+- `HLS_ROOT_DIR`：全新的转换输出目录，禁止配置为现有旧站HLS目录；`FFMPEG_PATH` 指定可执行文件。
+
+`GET /api/v1/assets/...` 仅提供白名单图片和歌词，身份证材料及原始音频不公开。HLS通过 `/api/v1/media/hls?action=processMp3|checkStatus|serveHls` 访问，清单、密钥、切片均验证会话及歌曲审核状态。切片支持Range；原生HLS的查询令牌会传播至子请求，部署时使用HTTPS且避免记录查询凭证。转换保留有界队列、同歌去重、完整VOD和原子发布；当前仍在首次播放时转换，单实例协调，不自动回收历史转换文件。
+
+`mvn -f backend/pom.xml verify` 执行隔离数据库与HTTP回归；已安装FFmpeg时使用 `-Pmedia-regression` 额外验证真实转换、长音频、解码、失败重试和鉴权。隔离邮件/识曲替身不代表真实投递或外部服务验收，真实MySQL、Safari和部署拓扑仍需联调。
+
+旧站独立 WebSocket 广播示例同时提供 `/websocket` 与 `/api/v1/websocket`，保持连接提示与文本广播行为，默认同源访问；它不提供音乐业务通知或聊天历史。开发代理已开启 WebSocket，生产代理需支持 Upgrade。

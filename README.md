@@ -1,6 +1,6 @@
 # LvDong-Music · 律动音乐
 
-律动音乐是一个 JavaWeb 音乐网站，围绕歌曲搜索、HLS 在线播放、用户账号、收藏、评论和歌曲上传构建。目前保留 Servlet 版本，同时逐步迁移至 Vue 3 与 Spring Boot 分层单体。
+律动音乐是一个 JavaWeb 音乐网站，围绕歌曲搜索、HLS 在线播放、用户账号、收藏、评论和歌曲上传构建。原有音乐主业务已迁移至 Vue 3 与 Spring Boot 分层单体，Servlet 版本保留用于历史参考。
 
 ## 项目组成
 
@@ -8,9 +8,9 @@
 | --- | --- | --- |
 | 旧站 `src/` | Java 16 编译目标、Servlet 3.1、JDBC、HikariCP、MySQL、Tomcat 9 | 用户体系、搜索、HLS 播放、收藏、评论、上传及音乐人申请等业务 |
 | [新前端](frontend/README.md) | Vue 3、TypeScript、Vite、Vue Router、Pinia、HLS.js | 公开搜索、账号与个人中心、收藏、评论、上传、识曲、歌词与常驻播放器 |
-| [独立后端](backend/README.md) | Java 21、Spring Boot 4.1.2、JDBC | 公开搜索、持久会话、本人收藏与歌曲详情 API |
+| [独立后端](backend/README.md) | Java 21、Spring Boot 4.1.2、JDBC | 公开搜索、账号与持久会话、收藏、评论、资料、音乐人、上传、识曲与 HLS |
 
-新前端的公开搜索、登录会话、本人收藏和歌曲详情已接入独立后端；注册、验证码、密码重置、资料编辑、音乐人、评论、上传、识曲和媒体仍调用 Servlet。推荐、歌单与 AI 演示不代表完整后端能力；反馈目前支持本机导出，第三方 OAuth 尚未接入。
+新前端的音乐业务 API 与媒体请求均已接入独立后端。邮件和第三方识曲需要配置外部服务；媒体需配置独立存储、旧资源只读根目录与 FFmpeg。推荐、歌单与 AI 演示不代表完整后端能力；反馈目前支持本机导出，第三方 OAuth 尚未接入。
 
 历史学习版本见 [v1.0.0](https://github.com/xgx2025/LvDong-Music/tree/v1.0.0)。
 
@@ -68,7 +68,7 @@ mvn -f backend/pom.xml clean verify
 java -jar backend/target/lvdong-backend-0.1.0-SNAPSHOT.jar
 ```
 
-新后端默认端口为8081。前端默认代理公开 API 到此端口，媒体仍需单独连接旧站。
+新后端默认端口为8081，前端开发代理将 `/api` 转发到此端口。新前端无需启动旧 WAR；旧资源由 Boot 从显式配置的只读目录读取，原文件不自动搬迁。启动前按后端说明显式执行增量表结构。
 
 ## 使用说明
 
