@@ -28,16 +28,16 @@ watch(() => session.authenticated, (loggedIn) => {
         ><span class="brand-mark" aria-hidden="true"><AppIcon name="music" /></span
         ><span>律动</span></RouterLink
       >
-        <div id="header-search"><form class="search-form" @submit.prevent="globalSearch"><label class="sr-only" for="global-keyword">歌曲、歌手或专辑关键词</label><input id="global-keyword" v-model="globalKeyword" type="search" maxlength="200" placeholder="搜索歌曲、歌手或专辑名称" /><button class="primary" type="submit">搜索音乐</button></form></div>
+        <div id="header-search"><form class="search-form" @submit.prevent="globalSearch"><label class="sr-only" for="global-keyword">歌曲、歌手或专辑关键词</label><input id="global-keyword" v-model="globalKeyword" type="search" maxlength="200" placeholder="搜索歌曲、歌手或专辑名称" /><button class="primary" type="submit"><AppIcon name="search" />搜索音乐</button></form></div>
         <nav aria-label="主导航">
           <RouterLink to="/"><AppIcon name="home" />首页</RouterLink>
           <RouterLink to="/recognition"><AppIcon name="microphone" />哼唱识曲</RouterLink>
           <RouterLink to="/upload"><AppIcon name="upload" />上传</RouterLink>
-          <RouterLink to="/assistant"><AppIcon name="music" />AI助手</RouterLink>
+          <RouterLink to="/assistant"><AppIcon name="robot" />AI助手</RouterLink>
           <RouterLink to="/feedback"><AppIcon name="chat" />反馈</RouterLink>
-          <RouterLink :to="session.authenticated ? '/profile' : '/login'">{{ session.authenticated ? '我的' : '登录' }}</RouterLink>
+          <RouterLink :to="session.authenticated ? '/profile' : '/login'"><AppIcon name="user" />{{ session.authenticated ? '我的' : '登录' }}</RouterLink>
           <RouterLink to="/queue">
-            播放队列<span>{{ player.queue.length.toString().padStart(2, "0") }}</span>
+            <AppIcon name="list" />播放队列<span>{{ player.queue.length.toString().padStart(2, "0") }}</span>
           </RouterLink>
         </nav>
       </div>

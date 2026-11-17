@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { provide } from "vue";
+provide("original-icon-version", 6);
+import AppIcon from "../components/AppIcon.vue";
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useSessionStore } from "../stores/session";
@@ -71,26 +74,26 @@ const date = computed(() => {
 <template>
   <section v-if="session.user" class="profile-page">
     <div class="profile-card">
-      <div class="profile-status"><span class="pill">{{ status === 'approved' ? '认证音乐人' : status === 'pending' ? '审核中' : status === 'rejected' ? '申请未通过' : status === 'normal' ? '普通用户' : '资格待确认' }}</span></div>
+      <div class="profile-status"><span class="pill"><AppIcon :name="status === 'approved' ? 'check-circle' : status === 'pending' ? 'clock' : 'music'" />{{ status === 'approved' ? '认证音乐人' : status === 'pending' ? '审核中' : status === 'rejected' ? '申请未通过' : status === 'normal' ? '普通用户' : '资格待确认' }}</span></div>
       <div class="profile-heading"><h2>个人资料</h2><p>管理你的个人信息和账户设置</p></div>
       <p v-if="error && !dialog?.open" role="alert" class="form-error">{{ error }}</p>
-      <div class="profile-identity"><div class="profile-avatar"><img v-if="avatar" :src="avatar" alt="用户头像" /><span v-else>{{ session.user.username.slice(0, 1) }}</span></div><div><h3>{{ session.user.username }}</h3><p>{{ session.user.email }}</p><div class="profile-badges"><span>注册时间: {{ date }}</span><RouterLink to="/favorites">收藏歌曲: {{ favoriteCount ?? "—" }}</RouterLink><span>{{ session.user.gender || '未设置' }}</span></div></div></div>
-      <div class="profile-bio"><h4>个人简介</h4><p>{{ session.user.bio || '该用户尚未填写个人简介' }}</p></div>
-      <dl class="profile-details"><dt>用户ID</dt><dd>{{ session.user.id }}</dd><dt>邮箱</dt><dd>{{ session.user.email }}</dd><dt>用户名</dt><dd>{{ session.user.username }}</dd><dt>性别</dt><dd>{{ session.user.gender || '未设置' }}</dd></dl>
+      <div class="profile-identity"><div class="profile-avatar"><img v-if="avatar" :src="avatar" alt="用户头像" /><span v-else>{{ session.user.username.slice(0, 1) }}</span></div><div><h3>{{ session.user.username }}</h3><p><AppIcon name="mail-solid" />{{ session.user.email }}</p><div class="profile-badges"><span><AppIcon name="calendar" />注册时间: {{ date }}</span><RouterLink to="/favorites"><AppIcon name="music" />收藏歌曲: {{ favoriteCount ?? "—" }}</RouterLink><span><AppIcon name="gender" />{{ session.user.gender || '未设置' }}</span></div></div></div>
+      <div class="profile-bio"><h4><AppIcon name="comment-outline" />个人简介</h4><p>{{ session.user.bio || '该用户尚未填写个人简介' }}</p></div>
+      <dl class="profile-details"><dt><AppIcon name="id-card" />用户ID</dt><dd>{{ session.user.id }}</dd><dt><AppIcon name="mail-solid" />邮箱</dt><dd>{{ session.user.email }}</dd><dt><AppIcon name="user-circle" />用户名</dt><dd>{{ session.user.username }}</dd><dt><AppIcon name="gender" />性别</dt><dd>{{ session.user.gender || '未设置' }}</dd></dl>
       <p v-if="statusError" class="form-error" role="alert">{{ statusError }} <button @click="loadStatus">重试资格查询</button></p>
       <p v-if="notice" role="status">{{ notice }}</p>
-      <div class="profile-actions"><button @click="logout">退出登录</button><RouterLink class="orange-button" to="/musician">{{ status === 'approved' ? '音乐人资料' : '申请成为音乐人' }}</RouterLink><button class="primary" @click="edit">编辑资料</button></div>
-      <div class="profile-shortcuts"><RouterLink to="/favorites">我的收藏</RouterLink><RouterLink to="/upload">上传音乐</RouterLink></div>
+      <div class="profile-actions"><button @click="logout"><AppIcon name="logout" />退出登录</button><RouterLink class="orange-button" to="/musician"><AppIcon name="guitar" />{{ status === 'approved' ? '音乐人资料' : '申请成为音乐人' }}</RouterLink><button class="primary" @click="edit"><AppIcon name="edit" />编辑资料</button></div>
+      <div class="profile-shortcuts"><RouterLink to="/favorites"><AppIcon name="heart" />我的收藏</RouterLink><RouterLink to="/upload"><AppIcon name="upload" />上传音乐</RouterLink></div>
     </div>
     <dialog ref="dialog" class="profile-dialog" aria-labelledby="edit-profile-title" @click="backdrop" @close="closed" @cancel="busy && $event.preventDefault()">
-      <button class="dialog-close" type="button" aria-label="关闭资料编辑" :disabled="busy" @click="close">×</button>
+      <button class="dialog-close" type="button" aria-label="关闭资料编辑" :disabled="busy" @click="close"><AppIcon name="close" /></button>
       <form class="form-stack" @submit.prevent="save"><div class="dialog-heading"><h2 id="edit-profile-title">编辑个人资料</h2><p>更新你的个人信息</p></div>
-        <div class="profile-avatar-editor"><div class="profile-avatar"><img v-if="draft.avatarBase64 || avatar" :src="draft.avatarBase64 || avatar!" alt="头像预览" /><span v-else>{{ draft.username.slice(0, 1) }}</span></div><label class="avatar-upload-control">更换头像<input ref="avatarInput" type="file" class="sr-only" aria-label="头像" accept="image/png,image/jpeg,image/webp,image/gif" :disabled="busy" @change="avatarChange" /></label><small>{{ avatarReading ? '正在读取头像…' : '支持PNG、JPG、WebP或GIF，最大3MB' }}</small></div>
+        <div class="profile-avatar-editor"><div class="profile-avatar"><img v-if="draft.avatarBase64 || avatar" :src="draft.avatarBase64 || avatar!" alt="头像预览" /><span v-else>{{ draft.username.slice(0, 1) }}</span></div><label class="avatar-upload-control"><AppIcon name="camera" />更换头像<input ref="avatarInput" type="file" class="sr-only" aria-label="头像" accept="image/png,image/jpeg,image/webp,image/gif" :disabled="busy" @change="avatarChange" /></label><small>{{ avatarReading ? '正在读取头像…' : '支持PNG、JPG、WebP或GIF，最大3MB' }}</small></div>
         <label>用户名<input v-model="draft.username" required minlength="2" maxlength="20" :disabled="busy" /></label>
         <label>性别<select v-model="draft.gender" :disabled="busy"><option>未知</option><option>男</option><option>女</option></select></label>
         <label>个人简介<textarea aria-label="个人简介" v-model="draft.bio" maxlength="200" rows="4" :disabled="busy"></textarea><small>{{ draft.bio.length }}/200</small></label>
         <p v-if="error" role="alert" class="form-error">{{ error }}</p>
-        <div class="button-group"><button type="button" :disabled="busy" @click="close">取消</button><button class="primary" :disabled="busy || avatarReading" type="submit">{{ busy ? '保存中…' : '保存资料' }}</button></div>
+        <div class="button-group"><button type="button" :disabled="busy" @click="close">取消</button><button class="primary" :disabled="busy || avatarReading" type="submit"><AppIcon :name="busy ? 'spinner' : 'save'" />{{ busy ? '保存中…' : '保存资料' }}</button></div>
       </form>
     </dialog>
   </section>

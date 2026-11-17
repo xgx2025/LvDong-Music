@@ -5,6 +5,7 @@ import App from "./App.vue";
 import SearchView from "./views/SearchView.vue";
 import QueueView from "./views/QueueView.vue";
 import { useSessionStore } from "./stores/session";
+import "font-awesome/css/font-awesome.css";
 import "./style.css";
 const router = createRouter({
   history: createWebHashHistory(import.meta.env.BASE_URL),

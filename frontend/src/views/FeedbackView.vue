@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppIcon from "../components/AppIcon.vue";
 import { onBeforeUnmount, reactive, ref } from "vue";
 const form = reactive({ type: "错误报告", content: "", contact: "" });
 const notice = ref(""), error = ref(""), screenshot = ref(""), filename = ref(""), reading = ref(false);
@@ -34,12 +35,12 @@ const faqs = [
 <template>
   <section class="feedback-page"><header class="centered-heading"><h1>意见反馈</h1><p>你的每一条建议，都是我们进步的动力。帮助我们打造更好的音乐体验</p></header>
     <form class="settings-card form-stack feedback-form" @submit.prevent="download">
-      <fieldset class="feedback-types"><legend>反馈类型 *</legend><div><label v-for="type in ['错误报告', '功能建议', '投诉', '其他']" :key="type"><input v-model="form.type" type="radio" name="feedback-type" :value="type" /><span>{{ type }}</span></label></div></fieldset>
+      <fieldset class="feedback-types"><legend>反馈类型 *</legend><div><label v-for="type in ['错误报告', '功能建议', '投诉', '其他']" :key="type"><input v-model="form.type" type="radio" name="feedback-type" :value="type" /><span><AppIcon :name="type === '错误报告' ? 'bug' : type === '功能建议' ? 'bulb' : type === '投诉' ? 'warning' : 'help'" />{{ type }}</span></label></div></fieldset>
       <label>反馈内容<textarea aria-label="反馈内容" v-model="form.content" required minlength="5" maxlength="2000" rows="6" placeholder="请详细描述你的问题或建议…"></textarea><small class="character-count">{{ form.content.length }}/2000</small></label>
       <label>联系方式（可选）<input v-model="form.contact" maxlength="200" placeholder="邮箱/电话/QQ（选填，方便联系）" /></label>
-      <div><label for="feedback-image">上传截图</label><label class="file-drop" for="feedback-image" @dragover.prevent @drop.prevent="select($event.dataTransfer?.files[0])"><span aria-hidden="true">＋</span><strong>点击或拖拽文件到此处</strong><small>支持JPG/PNG格式，最大5MB</small><input id="feedback-image" ref="fileInput" class="sr-only" type="file" accept="image/jpeg,image/png" @change="select(($event.target as HTMLInputElement).files?.[0])" /></label><div v-if="screenshot" class="screenshot-preview"><img :src="screenshot" alt="反馈截图预览" /><span>{{ filename }}</span><button type="button" @click="remove">移除</button></div></div>
-      <p v-if="error" class="form-error" role="alert">{{ error }}</p><p class="subtle">本站目前未提供反馈接收接口。你可以先导出反馈文件保存，文件不会自动发送。</p><button class="primary" :disabled="reading" type="submit">{{ reading ? '截图读取中…' : '导出反馈' }}</button><p v-if="notice" role="status">{{ notice }}</p>
+      <div><label for="feedback-image">上传截图</label><label class="file-drop" for="feedback-image" @dragover.prevent @drop.prevent="select($event.dataTransfer?.files[0])"><AppIcon name="cloud-upload" /><strong>点击或拖拽文件到此处</strong><small>支持JPG/PNG格式，最大5MB</small><input id="feedback-image" ref="fileInput" class="sr-only" type="file" accept="image/jpeg,image/png" @change="select(($event.target as HTMLInputElement).files?.[0])" /></label><div v-if="screenshot" class="screenshot-preview"><img :src="screenshot" alt="反馈截图预览" /><span>{{ filename }}</span><button type="button" @click="remove"><AppIcon name="trash" />移除</button></div></div>
+      <p v-if="error" class="form-error" role="alert">{{ error }}</p><p class="subtle">本站目前未提供反馈接收接口。你可以先导出反馈文件保存，文件不会自动发送。</p><button class="primary" :disabled="reading" type="submit"><AppIcon :name="reading ? 'spinner' : 'save'" />{{ reading ? '截图读取中…' : '导出反馈' }}</button><p v-if="notice" role="status">{{ notice }}</p>
     </form>
-    <section class="feedback-faq"><h2>常见问题</h2><details v-for="item in faqs" :key="item[0]"><summary>{{ item[0] }}</summary><p>{{ item[1] }}</p></details></section>
+    <section class="feedback-faq"><h2><AppIcon name="help" />常见问题</h2><details v-for="item in faqs" :key="item[0]"><summary>{{ item[0] }}</summary><p>{{ item[1] }}</p></details></section>
   </section>
 </template>

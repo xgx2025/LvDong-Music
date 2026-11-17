@@ -435,7 +435,7 @@ nav { gap: 18px; }
 .musician-gate { text-align: center; padding: 40px 24px; }
 .musician-gate > .feature-icon { margin: 0 auto 24px; width: 80px; height: 80px; font-size: 36px; }
 .musician-gate .feature-grid { margin: 32px auto; max-width: 800px; }
-.player.expanded { inset: 0; max-height: 100dvh; background: linear-gradient(rgba(30,41,59,.4),rgba(30,41,59,.4)),linear-gradient(135deg,#4a6cf7,#3becb4); padding-top: 0; --primary: #16ffff; }
+.player.expanded { inset: 0; max-height: 100dvh; background: linear-gradient(rgba(30,41,59,.4),rgba(30,41,59,.4)),linear-gradient(135deg,var(--player-cover-color,#4a6cf7),#3becb4); padding-top: 0; --primary: #16ffff; }
 .expanded-player-heading { position: sticky; top: 0; display: flex; justify-content: space-between; align-items: center; padding: 16px; background: rgba(255,255,255,.1); backdrop-filter: blur(10px); z-index: 2; margin-bottom: 40px; }
 .expanded-player-heading button { border: 0; background: transparent; }
 .now-playing { padding-top: 0; }
@@ -550,3 +550,55 @@ body:has(dialog[open]), body:has(.player.expanded) { overflow: hidden; }
   .verification-field { gap: 8px; }
   .verification-field > button { font-size: 12px; padding: 12px 8px; }
 }
+
+/* Original Font Awesome glyphs, bundled locally at the legacy versions. */
+.app-icon { display: inline-block; width: 1.15em; height: 1.15em; flex: 0 0 auto; vertical-align: -.18em; pointer-events: none; }
+button > .app-icon, a > .app-icon, h1 > .app-icon, h2 > .app-icon, h3 > .app-icon, h4 > .app-icon, dt > .app-icon, p > .app-icon, strong > .app-icon, .profile-badges .app-icon, .pill > .app-icon, .avatar-upload-control > .app-icon, label[for^="account-"] > .app-icon { margin-inline-end: .4em; }
+.field-label { display: inline-flex; align-items: center; gap: .4em; }
+.transport-buttons .app-icon, .artwork-play .app-icon, .brand-mark .app-icon, .player-tools .app-icon, .record-button .app-icon, .dialog-close .app-icon, .password-input button .app-icon { margin: 0; }
+.player-tools > button, .player-tools > a { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-width: 32px; min-height: 32px; }
+.player-tools .app-icon { width: 20px; height: 20px; }
+.favorite-control button[aria-pressed="true"] { color: #e54868; }
+.song-actions .app-icon { width: 14px; height: 14px; }
+.feature-icon > .app-icon { width: 55%; height: 55%; }
+.record-button > .app-icon { width: 30px; height: 30px; }
+.file-drop > .app-icon, .material-placeholder > .app-icon { width: 36px; height: 36px; }
+.feedback-types label > span { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.feedback-types .app-icon { width: 22px; height: 22px; }
+.dialog-close { display: grid; place-items: center; }
+.dialog-close > .app-icon { width: 22px; height: 22px; }
+.emoji-categories button:last-child > .app-icon { margin: 0; }
+.icon-spin { animation: spin 1s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .icon-spin { animation: none; } }
+
+.song-actions button { min-width: 32px; min-height: 32px; display: inline-flex; align-items: center; justify-content: center; }
+.song-actions button > .app-icon { margin: 0; }
+@media (max-width: 760px) { .song-actions { width: 108px; } }
+
+@font-face {
+  font-family: "Font Awesome 6 Original";
+  src: url("@fortawesome/fontawesome-free/webfonts/fa-solid-900.woff2") format("woff2");
+  font-weight: 900;
+  font-style: normal;
+  font-display: block;
+}
+.app-icon { font-style: normal; line-height: 1; text-align: center; }
+.app-icon.font-awesome-6 { font-family: "Font Awesome 6 Original"; font-weight: 900; }
+/* These original glyphs were introduced after 4.7 and need the FA6 font. */
+.app-icon.fa-robot::before { content: "\f544"; }
+.app-icon.fa-guitar::before { content: "\f7a6"; }
+.feature-icon > .app-icon { width: auto; height: auto; font-size: 24px; }
+.musician-gate > .feature-icon > .app-icon { font-size: 36px; }
+.brand-mark > .app-icon { width: auto; height: auto; font-size: 24px; }
+.file-drop > .app-icon, .material-placeholder > .app-icon { font-size: 36px; }
+.feedback-types .app-icon { font-size: 22px; }
+.record-button > .app-icon { font-size: 30px; }
+.player-tools .app-icon, .transport-buttons .app-icon { font-size: 20px; }
+.auth-social .app-icon { font-size: 24px; margin: 0; }
+.artwork-play > .app-icon { display: grid; place-items: center; font-size: 32px; }
+
+.form-stack label[for^="account-"] { display: inline-flex; align-items: center; gap: 6px; }
+.form-stack label[for^="account-"] > .app-icon { margin: 0; }
+
+.track-info, .expanded-player-heading { touch-action: pan-x; }
+.player-gesture-handle { position: absolute; top: 5px; left: calc(50% - 18px); width: 36px; height: 3px; border-radius: 3px; background: rgba(255,255,255,.45); }

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppIcon from "../components/AppIcon.vue";
 import { ref, watch } from "vue";
 import { getFavorites } from "../api/account";
 import { errorText } from "../api/servlet";
@@ -26,4 +27,4 @@ watch(() => favorites.states, () => {
   songs.value = visible;
 }, { deep: true });
 </script>
-<template><section><div class="section-heading"><h1>我的收藏</h1><button :disabled="loading" @click="load">刷新列表</button></div><p v-if="error" class="form-error" role="alert">{{ error }}</p><p v-if="loading" role="status">正在加载收藏…</p><template v-else><SongList v-if="songs.length" :songs="songs" /><div v-else class="empty-state"><h3>还没有收藏歌曲</h3><RouterLink class="primary" to="/">发现音乐</RouterLink></div><div class="pagination"><button :disabled="page <= 1" @click="page--">上一页</button><span>第 {{ page }} 页 · 共 {{ total }} 首</span><button :disabled="page * 20 >= total" @click="page++">下一页</button></div></template></section></template>
+<template><section><div class="section-heading"><h1><AppIcon name="heart" />我的收藏</h1><button :disabled="loading" @click="load"><AppIcon name="refresh" />刷新列表</button></div><p v-if="error" class="form-error" role="alert">{{ error }}</p><p v-if="loading" role="status">正在加载收藏…</p><template v-else><SongList v-if="songs.length" :songs="songs" /><div v-else class="empty-state"><h3>还没有收藏歌曲</h3><RouterLink class="primary" to="/">发现音乐</RouterLink></div><div class="pagination"><button :disabled="page <= 1" @click="page--">上一页</button><span>第 {{ page }} 页 · 共 {{ total }} 首</span><button :disabled="page * 20 >= total" @click="page++">下一页</button></div></template></section></template>

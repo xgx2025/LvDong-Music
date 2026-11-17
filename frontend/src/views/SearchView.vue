@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppIcon from "../components/AppIcon.vue";
 function scrollToSongs() { document.getElementById("search")?.scrollIntoView({ behavior: "smooth" }); }
 import { onBeforeUnmount, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
@@ -143,12 +144,12 @@ onBeforeUnmount(() => request?.abort());
               :aria-label="`播放 ${song.songName}`"
               @click="player.select(player.enqueue(song))"
             >
-              播放</button
+              <AppIcon name="play" /><span class="sr-only">播放</span></button
             ><button
               :aria-label="`加入队列 ${song.songName}`"
               @click="add(song)"
             >
-              加入
+              <AppIcon name="plus" /><span class="sr-only">加入</span>
             </button>
             <FavoriteButton :song-id="song.songId" />
           </div>

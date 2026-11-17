@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppIcon from "./AppIcon.vue";
 import { onBeforeUnmount, ref, watch } from "vue";
 import { readFile } from "../api/account";
 import { errorText } from "../api/servlet";
@@ -31,12 +32,12 @@ function remove() {
     <label class="material-upload" :class="{ 'drag-active': dragging, 'has-image': modelValue }" @dragover.prevent="dragging = !disabled" @dragleave.prevent="dragging = false" @drop.prevent="dragging = false; select($event.dataTransfer?.files[0])">
       <span class="material-label">{{ label }}<span v-if="required"> *</span></span>
       <img v-if="modelValue" :src="modelValue" :alt="`${label}预览`" />
-      <span v-else class="material-placeholder" aria-hidden="true">＋</span>
+      <span v-else class="material-placeholder" aria-hidden="true"><AppIcon :name="label.includes('身份证') ? 'id-card' : 'camera'" /></span>
       <span>{{ reading ? '正在读取图片…' : modelValue ? '点击更换图片' : '点击选择或拖入图片' }}</span>
       <small>图片最大3MB</small>
       <input ref="input" class="sr-only" type="file" :aria-label="label" accept="image/png,image/jpeg,image/webp,image/gif" :required="required && !modelValue" :disabled="disabled" @change="select(($event.target as HTMLInputElement).files?.[0])" />
     </label>
-    <button v-if="modelValue" class="material-remove" type="button" :disabled="disabled" :aria-label="`移除${label}`" @click="remove">移除图片</button>
+    <button v-if="modelValue" class="material-remove" type="button" :disabled="disabled" :aria-label="`移除${label}`" @click="remove"><AppIcon name="trash" />移除图片</button>
     <p v-if="error" class="form-error" role="alert">{{ error }}</p>
   </div>
 </template>
