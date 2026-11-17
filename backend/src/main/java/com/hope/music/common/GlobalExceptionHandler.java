@@ -32,7 +32,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             validation.getParameterValidationResults().forEach(result -> errors.put(
                     result.getMethodParameter().getParameterName(), "参数不符合约束"));
         }
-        return new ResponseEntity<>(new Result<>(status.value(), status.is5xxServerError() ? "服务暂不可用" : "请求参数或路径无效", errors), headers, status);
+        String message = status.is5xxServerError() ? "服务暂不可用" : "请求参数或路径无效";
+        if (ex instanceof org.springframework.web.server.ResponseStatusException business
+                && business.getReason() != null && (status.is4xxClientError() || status.value() == 503)) {
+            message = business.getReason();
+        }
+        return new ResponseEntity<>(new Result<>(status.value(), message, errors), headers, status);
     }
 
     @ExceptionHandler(Exception.class)

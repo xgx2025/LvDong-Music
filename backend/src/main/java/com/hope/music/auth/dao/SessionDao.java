@@ -10,12 +10,12 @@ public class SessionDao {
     private final JdbcTemplate jdbc;
     public SessionDao(JdbcTemplate jdbc) { this.jdbc = jdbc; }
     public Map<String,Object> user(String email) {
-        return jdbc.query("SELECT id,username,password,email,avatar,gender,bio,created_at FROM users WHERE email=?",
+        return jdbc.query("SELECT id,username,password,email,avatar,gender,bio,created_at FROM users WHERE email=? FOR UPDATE",
             (rs,n) -> { Map<String,Object> u = new HashMap<>();
                 for (String key : List.of("id","username","password","email","avatar","gender","bio")) u.put(key,rs.getString(key));
                 u.put("registerTime",rs.getString("created_at"));
                 Object avatar=u.get("avatar");
-                if(avatar instanceof String path && !(path.startsWith("static/") || path.startsWith("/static/") || path.startsWith("https://") || path.startsWith("http://"))) u.put("avatar",null);
+                if(avatar instanceof String path && !(path.startsWith("/api/v1/assets/") || path.startsWith("static/") || path.startsWith("/static/") || path.startsWith("https://") || path.startsWith("http://"))) u.put("avatar",null);
                 return u; }, email).stream().findFirst().orElse(null);
     }
     public Map<String,Object> profile(String id) {
@@ -24,7 +24,7 @@ public class SessionDao {
                 for (String key : List.of("id","username","email","avatar","gender","bio")) u.put(key,rs.getString(key));
                 u.put("registerTime",rs.getString("created_at"));
                 Object avatar=u.get("avatar");
-                if(avatar instanceof String path && !(path.startsWith("static/") || path.startsWith("/static/") || path.startsWith("https://") || path.startsWith("http://"))) u.put("avatar",null);
+                if(avatar instanceof String path && !(path.startsWith("/api/v1/assets/") || path.startsWith("static/") || path.startsWith("/static/") || path.startsWith("https://") || path.startsWith("http://"))) u.put("avatar",null);
                 return u; }, id).stream().findFirst().orElse(null);
     }
     public void upgradePassword(String id,String previous,String hash) {
