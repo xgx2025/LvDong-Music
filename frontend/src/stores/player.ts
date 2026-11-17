@@ -20,7 +20,7 @@ export const usePlayerStore = defineStore("player", () => {
   const current = computed(() => queue.value[index.value]);
   let controller: AbortController | undefined;
   let loaded = false;
-  // Isolated tests inject a resolver; the shipped UI only resolves authenticated legacy media.
+  // Isolated tests inject a resolver; the shipped UI resolves authenticated Boot media.
   let resolver = async (song: Song, signal: AbortSignal): Promise<MediaSource> => {
     const session = useSessionStore(), version = session.revision;
     const prepare = () => prepareLegacy(song.songId, session.mediaToken, signal, text => { message.value = text; });

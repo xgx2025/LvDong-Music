@@ -24,14 +24,22 @@ export async function jsonRequest<T>(
       "无法连接服务，请检查网络或服务是否已启动",
     );
   }
-  if (!response.ok)
+  if (!response.ok) {
+    let detail: string | undefined;
+    if ([400, 403, 404, 409, 429, 503].includes(response.status)) {
+      try {
+        const body = await response.json() as { message?: unknown };
+        if (typeof body.message === "string" && body.message.length <= 300) detail = body.message;
+      } catch { /* Non-JSON errors keep the generic status message. */ }
+    }
     throw new RequestError(
       "http",
       response.status === 401
         ? "登录凭证已失效，请重新登录"
-        : `服务请求失败（${response.status}），请稍后重试`,
+        : detail || `服务请求失败（${response.status}），请稍后重试`,
       response.status,
     );
+  }
   try {
     return (await response.json()) as T;
   } catch {

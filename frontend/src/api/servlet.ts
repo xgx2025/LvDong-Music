@@ -8,6 +8,19 @@ export interface LegacyResult {
 
 // Only implemented actions move to Boot; remaining writes still execute in WAR.
 export const bootActions: Record<string, string> = {
+  "userServlet/updateProfile": "/api/v1/creator/profile",
+  "singerServlet/getStatus": "/api/v1/creator/status",
+  "singerServlet/applyMusician": "/api/v1/creator/application",
+  "musicServlet/upload": "/api/v1/creator/upload",
+  "recognitionServlet/musicRecognition": "/api/v1/recognition",
+  "authServlet/sendVerificationCode": "/api/v1/account/verification-code",
+  "authServlet/verifyCode": "/api/v1/account/verification",
+  "userServlet/register": "/api/v1/account/registration",
+  "userServlet/resetPassword": "/api/v1/account/password-reset",
+  "commentServlet/getComments": "/api/v1/comments/page",
+  "commentServlet/getCommentCount": "/api/v1/comments/count",
+  "commentServlet/createComment": "/api/v1/comments",
+  "commentServlet/likeComment": "/api/v1/comments/like",
   "searchServlet/getSong": "/api/v1/library/song",
   "favoriteServlet/getFavorites": "/api/v1/library/favorites",
   "favoriteServlet/getStates": "/api/v1/library/states",

@@ -1,5 +1,9 @@
 import { jsonRequest } from "./http";
 export const legacyBase = (import.meta.env.VITE_LEGACY_BASE || "/legacy/") as string;
+export function bootUrl(path: string): string {
+  const base = (import.meta.env.VITE_API_BASE || "").replace(/\/$/, "");
+  return new URL(`${base}${path}`, window.location.origin).href;
+}
 export function legacyUrl(path: string): string {
   if (!legacyBase)
     throw new Error("尚未配置旧媒体服务。可先加入队列，待媒体服务接入后播放。");
@@ -20,7 +24,8 @@ export function coverUrl(path: string | null): string | undefined {
   try {
     const url = /^https?:\/\//i.test(path)
       ? new URL(path)
-      : new URL(legacyUrl(path));
+      : new URL(path.startsWith("/api/v1/assets/") ? bootUrl(path) :
+          path.replace(/^\//, "").startsWith("static/") ? bootUrl(`/api/v1/assets/${path.replace(/^\//, "")}`) : legacyUrl(path));
     return ["http:", "https:"].includes(url.protocol) ? url.href : undefined;
   } catch {
     return;
@@ -37,10 +42,10 @@ export async function prepareLegacy(
   signal: AbortSignal,
   status: (text: string) => void,
 ): Promise<MediaSource> {
-  const endpoint = legacyUrl("hls");
+  const endpoint = bootUrl("/api/v1/media/hls");
   if (!token)
     throw new Error(
-      "请在连接设置中提供旧站播放凭证，凭证仅保存在当前页面内存中。",
+      "请先登录，或在连接设置中提供有效播放凭证。",
     );
   const headers = { Authorization: `Bearer ${token}` };
   const params = new URLSearchParams({ action: "processMp3", songId });

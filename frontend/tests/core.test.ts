@@ -84,6 +84,10 @@ describe("request boundaries", () => {
       name: "AbortError",
     });
   });
+  it("shows bounded business explanations for actionable HTTP errors", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ message: "请等待60秒后再发送验证码" }, { status: 429 })));
+    await expect(jsonRequest("/")).rejects.toMatchObject({ kind: "http", status: 429, message: "请等待60秒后再发送验证码" });
+  });
 });
 describe("persistent player and queue", () => {
   it("deduplicates queue entries and preserves the same Audio across store consumers", async () => {

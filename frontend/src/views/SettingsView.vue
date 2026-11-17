@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { legacyBase } from "../api/legacy";
 import { useSessionStore } from "../stores/session";
 import { usePlayerStore } from "../stores/player";
 const session = useSessionStore(),
@@ -28,28 +27,24 @@ function clear() {
       <h2>公开曲库</h2>
       <p>
         歌曲与歌手搜索使用独立后端公开
-        API，无需登录。专辑和歌单独立检索尚未迁移。
+        API，无需登录。专辑和歌单独立检索尚未完整实现。
       </p>
     </div>
     <div class="settings-card">
       <span class="pill muted">{{
-        legacyBase ? "已配置地址 · 待播放校验" : "待配置"
+        "已接入 · 待播放校验"
       }}</span>
-      <h2>旧站媒体连接</h2>
-      <p v-if="session.authenticated">已登录为 {{ session.user?.username }}，播放与账号操作使用同一旧站身份。<RouterLink to="/profile">查看个人中心</RouterLink></p>
+      <h2>媒体连接</h2>
+      <p v-if="session.authenticated">已登录为 {{ session.user?.username }}，播放与账号操作使用同一登录身份。<RouterLink to="/profile">查看个人中心</RouterLink></p>
       <p>
-        播放仍由旧站的鉴权 HLS 服务提供。{{
-          legacyBase
-            ? "已配置媒体服务地址，可提供有效播放凭证。"
-            : "媒体服务尚未连接，仍可浏览并整理队列。请联系站点维护者配置服务。"
-        }}
+        播放由独立后端的鉴权 HLS 服务提供，登录后即可使用。无法准备音频时，请联系站点维护者确认媒体存储与转换服务已配置。
       </p>
       <p>
-        凭证仅用于媒体请求，刷新页面即清除；不会导入旧站身份，不提供自动刷新。仅在可信设备和可信媒体地址下使用。原生
+        手工凭证仅用于媒体请求，刷新页面即清除，不提供自动刷新。仅在可信设备上使用。原生
         HLS 会将凭证带入查询参数，服务端应使用 HTTPS 并避免记录凭证。
       </p>
       <form v-if="!session.authenticated" @submit.prevent="save">
-        <label for="media-token">旧站 Access Token</label
+        <label for="media-token">播放 Access Token</label
         ><input
           id="media-token"
           v-model="draft"
@@ -61,7 +56,7 @@ function clear() {
         <div class="button-group">
           <button
             class="primary"
-            :disabled="!legacyBase || !draft.trim()"
+            :disabled="!draft.trim()"
             type="submit"
           >
             保存播放凭证</button

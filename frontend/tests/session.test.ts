@@ -93,7 +93,8 @@ it("routes migrated actions to Boot and leaves pending writes on the WAR", async
   const session = useSessionStore(); await session.login(user.email, "password");
   await session.request("favoriteServlet", "addFavorite", { songId: "9007199254740993" });
   await session.request("commentServlet", "likeComment", { commentId: "7", like: true });
+  await session.request("singerServlet", "getStatus");
   expect(fetcher.mock.calls.map(([url]) => new URL(url).pathname)).toEqual([
-    "/api/v1/session/login", "/api/v1/library/favorite", "/legacy/commentServlet",
+    "/api/v1/session/login", "/api/v1/library/favorite", "/api/v1/comments/like", "/api/v1/creator/status",
   ]);
 });
