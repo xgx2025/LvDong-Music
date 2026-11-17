@@ -1,8 +1,24 @@
 <script setup lang="ts">
+import { computed, onMounted, onBeforeUnmount } from "vue";
+import { useRoute } from "vue-router";
 import { usePlayerStore } from "../stores/player";
+import { useSessionStore } from "../stores/session";
+import { coverUrl } from "../api/legacy";
 import CoverArt from "./CoverArt.vue";
 import LyricsPanel from "./LyricsPanel.vue";
 const p = usePlayerStore();
+const session = useSessionStore(), route = useRoute();
+const background = computed(() => coverUrl(p.current?.coverUrl || null));
+const loginLink = computed(() => ({ path: "/login", query: { redirect: route.fullPath } }));
+function keyboard(event: KeyboardEvent) {
+  if (event.code !== "Space" || event.repeat || event.isComposing || event.defaultPrevented
+    || event.ctrlKey || event.altKey || event.metaKey || event.shiftKey || route.meta.authLayout || !p.queue.length) return;
+  if (event.target instanceof HTMLElement && event.target.closest('input, textarea, select, button, a, [contenteditable], [role="textbox"], [role="slider"]')) return;
+  event.preventDefault();
+  void p.toggle();
+}
+onMounted(() => document.addEventListener("keydown", keyboard));
+onBeforeUnmount(() => document.removeEventListener("keydown", keyboard));
 const time = (value: number) =>
   `${Math.floor(value / 60)}:${Math.floor(value % 60)
     .toString()
@@ -14,6 +30,7 @@ const time = (value: number) =>
     aria-label="常驻播放器"
     :class="{ expanded: p.expanded }"
   >
+    <img v-if="p.expanded && background" :src="background" alt="" aria-hidden="true" class="player-cover-background" referrerpolicy="no-referrer" />
     <div v-if="p.expanded" class="now-playing">
       <p class="eyebrow">NOW PLAYING</p>
       <CoverArt :path="p.current?.coverUrl" :name="p.current?.songName" />
@@ -49,8 +66,8 @@ const time = (value: number) =>
         <div class="transport-buttons">
           <button
             aria-label="上一首"
-            :disabled="p.index <= 0"
-            @click="p.select(p.index - 1)"
+            :disabled="!p.queue.length"
+            @click="p.previous()"
           >
             Ⅰ◀</button
           ><button
@@ -62,8 +79,8 @@ const time = (value: number) =>
             {{ p.busy ? "■" : p.playing ? "Ⅱ" : "▶" }}</button
           ><button
             aria-label="下一首"
-            :disabled="p.index + 1 >= p.queue.length || !p.queue.length"
-            @click="p.select(p.index + 1)"
+            :disabled="!p.queue.length"
+            @click="p.next()"
           >
             ▶Ⅰ
           </button>
@@ -83,6 +100,8 @@ const time = (value: number) =>
         >
       </div>
       <div class="player-tools">
+        <button class="play-mode" :aria-label="`播放模式：${p.modeLabel}`" title="切换播放模式" @click="p.cycleMode()">{{ p.modeLabel }}</button>
+        <button :aria-label="p.volume === 0 ? '恢复音量' : '静音'" :aria-pressed="p.volume === 0" @click="p.toggleMute()">{{ p.volume === 0 ? '恢复音量' : '静音' }}</button>
         <label
           >音量<input
             aria-label="音量"
@@ -102,7 +121,7 @@ const time = (value: number) =>
       </div>
     </div>
     <p v-if="p.message" class="player-message" role="status">
-      {{ p.message }} <RouterLink to="/settings">连接设置</RouterLink>
+      {{ p.message }} <RouterLink v-if="!session.authenticated" :to="loginLink">前往登录</RouterLink>
     </p>
   </section>
 </template>

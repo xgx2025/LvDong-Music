@@ -4,15 +4,23 @@ import { createRouter, createWebHashHistory } from "vue-router";
 import App from "./App.vue";
 import SearchView from "./views/SearchView.vue";
 import QueueView from "./views/QueueView.vue";
-import SettingsView from "./views/SettingsView.vue";
 import { useSessionStore } from "./stores/session";
 import "./style.css";
 const router = createRouter({
   history: createWebHashHistory(import.meta.env.BASE_URL),
+  scrollBehavior: () => ({ top: 0 }),
   routes: [
     { path: "/", component: SearchView },
     { path: "/queue", component: QueueView },
-    { path: "/settings", component: SettingsView },
+    { path: "/settings", redirect: "/" },
+    { path: "/game", alias: "/game.html", component: () => import("./views/GameView.vue"), meta: { title: "坦克大战" } },
+    ...[
+      ["service", "service-agreement.html", "服务条款"],
+      ["privacy", "privacy-policy.html", "隐私政策"],
+      ["musician", "musicianAgreement.html", "音乐人服务协议"],
+      ["musician-privacy", "privacyPolicy.html", "音乐人隐私政策"],
+    ].map(([kind, legacy, title]) => ({ path: `/agreements/${kind}`, alias: `/static/agreement/${legacy}`,
+      component: () => import("./views/AgreementView.vue"), props: { kind }, meta: { dark: true, title } })),
     { path: "/login", component: () => import("./views/AuthView.vue"), meta: { dark: true, authLayout: true, title: "登录" } },
     { path: "/register", component: () => import("./views/AuthView.vue"), meta: { dark: true, authLayout: true, title: "注册" } },
     { path: "/password-reset", component: () => import("./views/AuthView.vue"), meta: { dark: true, authLayout: true, title: "重置密码" } },
@@ -42,6 +50,6 @@ router.beforeEach(async (to) => {
     return { path: "/login", query: { redirect: to.fullPath } };
 });
 router.afterEach((to) => {
-  document.title = `${to.meta.title || (to.path === "/queue" ? "播放队列" : to.path === "/settings" ? "连接设置" : "发现音乐")} · 律动音乐`;
+  document.title = `${to.meta.title || (to.path === "/queue" ? "播放队列" : "发现音乐")} · 律动音乐`;
 });
 createApp(App).use(pinia).use(router).mount("#app");

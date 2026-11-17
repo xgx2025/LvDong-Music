@@ -27,7 +27,7 @@ it("coalesces concurrent 401s into one refresh and retries with the renewed toke
   vi.stubGlobal("fetch", fetcher);
   const session = useSessionStore(); await session.login(user.email, "test-password", true);
   await Promise.all([session.request("userServlet", "getProfile"), session.request("favoriteServlet", "getFavorites"), session.request("singerServlet", "getStatus")]);
-  expect(refreshes).toBe(1); expect(session.mediaToken).toBe("new-access");
+  expect(refreshes).toBe(1); expect(session.accessToken).toBe("new-access");
   expect([...saved.values()][0]).not.toContain("test-password");
   expect(session.user?.id).toBe(user.id);
 });
@@ -45,7 +45,7 @@ it("does not revive credentials when a refresh arrives after logout", async () =
   await Promise.resolve(); await session.logout();
   release(Response.json({ tokens: { accessToken: "late-access", refreshToken: "refresh" } }));
   await pending;
-  expect(session.authenticated).toBe(false); expect(session.mediaToken).toBe(""); expect(saved.size).toBe(0);
+  expect(session.authenticated).toBe(false); expect(session.accessToken).toBe(""); expect(saved.size).toBe(0);
 });
 
 it("clears all state after rejected renewal and retries a request at most once", async () => {
@@ -72,7 +72,7 @@ it("restores only after the server renews the tab session", async () => {
   saved.set("lvdong.vue.session", JSON.stringify({ ...result.user, user, ...result.tokens }));
   vi.stubGlobal("fetch", vi.fn(async () => Response.json({ tokens: { accessToken: "restored", refreshToken: "refresh" } })));
   const session = useSessionStore(); await session.restore();
-  expect(session.authenticated).toBe(true); expect(session.mediaToken).toBe("restored");
+  expect(session.authenticated).toBe(true); expect(session.accessToken).toBe("restored");
 });
 
 it("parses multi-tag LRC, offset, fractions and finds the line after seeking", () => {

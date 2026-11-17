@@ -9,9 +9,10 @@ const mode = computed(() => route.path === "/register" ? "register" : route.path
 const title = computed(() => ({ login: "登录", register: "注册账号", reset: "重置密码" })[mode.value]);
 const form = reactive({ username: "", email: "", password: "", confirm: "", verificationCode: "", remember: false });
 const busy = ref(false), sending = ref(false), remaining = ref(0), visible = ref(false), error = ref(""), notice = ref("");
+const termsAccepted = ref(false);
 let timer: ReturnType<typeof setInterval> | undefined;
 let generation = 0;
-watch(mode, () => { generation++; error.value = notice.value = form.password = form.confirm = form.verificationCode = ""; busy.value = false; });
+watch(mode, () => { generation++; error.value = notice.value = form.password = form.confirm = form.verificationCode = ""; busy.value = false; termsAccepted.value = false; });
 onBeforeUnmount(() => { generation++; clearInterval(timer); });
 async function code() {
   if (sending.value || remaining.value) return;
@@ -27,6 +28,7 @@ async function code() {
 async function submit() {
   if (busy.value) return;
   error.value = notice.value = "";
+  if (mode.value === "register" && !termsAccepted.value) { error.value = "请先阅读并同意服务条款和隐私政策"; return; }
   if (mode.value !== "login" && form.password !== form.confirm) { error.value = "两次输入的密码不一致"; return; }
   busy.value = true;
   const version = generation, currentMode = mode.value;
@@ -67,6 +69,7 @@ async function submit() {
         </div>
         <label v-if="mode !== 'login'">确认密码<input v-model="form.confirm" type="password" required minlength="8" autocomplete="new-password" /></label>
         <label v-if="mode === 'login'" class="checkbox-label"><input v-model="form.remember" type="checkbox" />在当前标签页保持登录</label>
+        <label v-if="mode === 'register'" class="checkbox-label"><input v-model="termsAccepted" type="checkbox" required /><span>我已阅读并同意<RouterLink to="/agreements/service" target="_blank" rel="noopener">《服务条款》</RouterLink>和<RouterLink to="/agreements/privacy" target="_blank" rel="noopener">《隐私政策》</RouterLink></span></label>
         <p v-if="error" class="form-error" role="alert">{{ error }}</p><p v-if="notice" role="status">{{ notice }}</p>
         <button class="primary auth-submit" :disabled="busy" type="submit">{{ busy ? '处理中…' : title }}</button>
       </form>

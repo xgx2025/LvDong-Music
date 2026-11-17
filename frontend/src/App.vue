@@ -31,7 +31,7 @@ watch(() => session.authenticated, (loggedIn) => {
           <RouterLink to="/queue">
             播放队列<span>{{ player.queue.length.toString().padStart(2, "0") }}</span>
           </RouterLink>
-          <RouterLink to="/settings">连接设置</RouterLink>
+          <RouterLink to="/game">小游戏</RouterLink>
         </nav>
       </div>
     </header>

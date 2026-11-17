@@ -45,7 +45,7 @@ export async function prepareLegacy(
   const endpoint = bootUrl("/api/v1/media/hls");
   if (!token)
     throw new Error(
-      "请先登录，或在连接设置中提供有效播放凭证。",
+      "请先登录后播放音乐。",
     );
   const headers = { Authorization: `Bearer ${token}` };
   const params = new URLSearchParams({ action: "processMp3", songId });

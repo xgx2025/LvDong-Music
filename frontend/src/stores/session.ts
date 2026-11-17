@@ -17,7 +17,6 @@ interface LoginResult extends LegacyResult { user: UserProfile; tokens: Tokens }
 const storageKey = "lvdong.vue.session";
 
 export const useSessionStore = defineStore("session", () => {
-  const mediaToken = ref("");
   const accessToken = ref("");
   const user = ref<UserProfile>();
   const revision = ref(0);
@@ -35,7 +34,7 @@ export const useSessionStore = defineStore("session", () => {
   function clear() {
     revision.value++;
     user.value = undefined;
-    accessToken.value = mediaToken.value = refreshToken = "";
+    accessToken.value = refreshToken = "";
     remember = false;
     refreshing = undefined;
     persist();
@@ -48,7 +47,7 @@ export const useSessionStore = defineStore("session", () => {
     if (!result.success || !result.tokens?.accessToken || !result.tokens.refreshToken || !result.user?.id)
       throw new Error("登录响应不完整，请重试");
     user.value = result.user;
-    accessToken.value = mediaToken.value = result.tokens.accessToken;
+    accessToken.value = result.tokens.accessToken;
     refreshToken = result.tokens.refreshToken;
     remember = keepSession;
     persist();
@@ -62,7 +61,7 @@ export const useSessionStore = defineStore("session", () => {
         const result = await servletRequest<LegacyResult & { tokens: Tokens }>("userServlet", "refreshToken", { refreshToken });
         if (version !== revision.value) throw new Error("登录状态已改变");
         if (!result.tokens?.accessToken) throw new Error("登录已过期，请重新登录");
-        accessToken.value = mediaToken.value = result.tokens.accessToken;
+        accessToken.value = result.tokens.accessToken;
         refreshToken = result.tokens.refreshToken || refreshToken;
         persist();
       } catch (error) {
@@ -113,5 +112,5 @@ export const useSessionStore = defineStore("session", () => {
     if (token || renewal)
       await servletRequest("userServlet", "logout", { refreshToken: renewal }, token);
   }
-  return { mediaToken, accessToken, user, revision, authenticated, login, logout, restore, refresh, request, updateUser, clear };
+  return { accessToken, user, revision, authenticated, login, logout, restore, refresh, request, updateUser, clear };
 });

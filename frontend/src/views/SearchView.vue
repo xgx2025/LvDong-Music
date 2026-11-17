@@ -101,7 +101,7 @@ onBeforeUnmount(() => request?.abort());
       <h3>暂时没能连接曲库</h3>
       <p>{{ error }}</p>
       <button class="primary" @click="load">重试搜索</button
-      ><RouterLink to="/settings">查看连接说明</RouterLink>
+      ><span class="subtle">请稍后重试，或联系站点维护者。</span>
     </div>
     <template v-else-if="result"
       ><div v-if="!result.songs.length" class="empty-state">

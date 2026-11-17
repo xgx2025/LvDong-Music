@@ -3,6 +3,7 @@ import { onMounted, reactive, ref } from "vue";
 import { applyMusician, musicianStatus, readFile } from "../api/account";
 import { errorText } from "../api/servlet";
 const status = ref(""), error = ref(""), notice = ref(""), busy = ref(false);
+const termsAccepted = ref(false);
 const form = reactive({ singerName: "", gender: "未知", nationality: "中国", singerBio: "", singerAvatarBase64: "", idCardFrontBase64: "", idCardBackBase64: "" });
 async function load() { try { status.value = (await musicianStatus()).status; } catch (e) { error.value = errorText(e); } }
 onMounted(load);
@@ -15,6 +16,7 @@ async function submit() {
   if (busy.value) return;
   busy.value = true; error.value = "";
   try {
+    if (!termsAccepted.value) throw new Error("请先阅读并同意音乐人服务协议和隐私政策");
     if (!form.singerAvatarBase64 || !form.idCardFrontBase64 || !form.idCardBackBase64) throw new Error("请提供歌手头像及身份证正反面");
     await applyMusician({ ...form });
     form.idCardFrontBase64 = form.idCardBackBase64 = "";
@@ -39,7 +41,7 @@ async function submit() {
       <label>身份证正面<input type="file" accept="image/png,image/jpeg,image/webp" required @change="image($event, 'idCardFrontBase64')" /></label>
       <label>身份证反面<input type="file" accept="image/png,image/jpeg,image/webp" required @change="image($event, 'idCardBackBase64')" /></label>
       <p class="subtle">材料仅用于音乐人身份审核，每张图片不超过3MB。</p>
-      <label class="checkbox-label"><input type="checkbox" required />我已确认资料真实，并同意提交身份材料用于审核</label>
+      <label class="checkbox-label"><input v-model="termsAccepted" type="checkbox" required /><span>我已确认资料真实，同意提交身份材料用于审核，并已阅读和同意<RouterLink to="/agreements/musician" target="_blank" rel="noopener">《音乐人服务协议》</RouterLink>和<RouterLink to="/agreements/musician-privacy" target="_blank" rel="noopener">《隐私政策》</RouterLink></span></label>
       <button type="submit" class="orange-button" :disabled="busy">{{ busy ? '提交中…' : '提交申请' }}</button>
     </form>
     <button v-else @click="load">重新查询资格</button>

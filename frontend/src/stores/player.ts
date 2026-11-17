@@ -17,13 +17,17 @@ export const usePlayerStore = defineStore("player", () => {
     volume = ref(0.75),
     message = ref(""),
     expanded = ref(false);
+  const playMode = ref<"sequence" | "single" | "random">("single");
+  const modeLabel = computed(() => ({ sequence: "顺序播放", single: "单曲循环", random: "随机播放" })[playMode.value]);
+  let previousVolume = volume.value;
   const current = computed(() => queue.value[index.value]);
   let controller: AbortController | undefined;
   let loaded = false;
   // Isolated tests inject a resolver; the shipped UI resolves authenticated Boot media.
   let resolver = async (song: Song, signal: AbortSignal): Promise<MediaSource> => {
     const session = useSessionStore(), version = session.revision;
-    const prepare = () => prepareLegacy(song.songId, session.mediaToken, signal, text => { message.value = text; });
+    if (!session.authenticated) throw new RequestError("http", "请先登录后播放音乐", 401);
+    const prepare = () => prepareLegacy(song.songId, session.accessToken, signal, text => { message.value = text; });
     try { return await prepare(); }
     catch (error) {
       if (!(error instanceof RequestError) || error.status !== 401 || !session.authenticated || signal.aborted) throw error;
@@ -55,9 +59,28 @@ export const usePlayerStore = defineStore("player", () => {
     message.value = "音频加载失败，请检查媒体服务、凭证或网络后重试";
   });
   engine.audio.addEventListener("ended", () => {
-    if (index.value + 1 < queue.value.length) void select(index.value + 1);
-    else playing.value = false;
+    if (index.value < 0 || !current.value || !loaded) return;
+    if (playMode.value === "single") {
+      engine.seek(0);
+      void engine.play().catch(() => { playing.value = false; message.value = "浏览器未开始播放，请再次点击播放"; });
+    } else void next();
   });
+  function cycleMode() {
+    playMode.value = playMode.value === "sequence" ? "single" : playMode.value === "single" ? "random" : "sequence";
+  }
+  function next() {
+    const count = queue.value.length;
+    if (!count) return;
+    if (index.value < 0) return select(0);
+    // Select among the other tracks without retry loops, including a one-track queue.
+    const target = playMode.value === "random" && count > 1
+      ? (index.value + 1 + Math.floor(Math.random() * (count - 1))) % count
+      : playMode.value === "single" ? index.value : (index.value + 1) % count;
+    return select(target);
+  }
+  function previous() {
+    if (queue.value.length) return select(index.value < 0 ? 0 : (index.value - 1 + queue.value.length) % queue.value.length);
+  }
   function enqueue(song: Song) {
     const found = queue.value.findIndex((item) => item.songId === song.songId);
     if (found >= 0) return found;
@@ -124,8 +147,13 @@ export const usePlayerStore = defineStore("player", () => {
     queue.value.splice(target, 1);
   }
   function setVolume(value: number) {
+    if (!Number.isFinite(value)) return;
     volume.value = Math.min(1, Math.max(0, value));
     engine.audio.volume = volume.value;
+    if (volume.value > 0) previousVolume = volume.value;
+  }
+  function toggleMute() {
+    setVolume(volume.value > 0 ? 0 : previousVolume);
   }
   function clear() {
     stop();
@@ -143,12 +171,18 @@ export const usePlayerStore = defineStore("player", () => {
     volume,
     message,
     expanded,
+    playMode,
+    modeLabel,
+    cycleMode,
+    next,
+    previous,
     enqueue,
     select,
     toggle,
     stop,
     remove,
     setVolume,
+    toggleMute,
     clear,
     seek: (value: number) => engine.seek(value),
     setResolver: (next: typeof resolver) => {

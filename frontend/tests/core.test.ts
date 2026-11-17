@@ -2,6 +2,7 @@ import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import { apiRequest, jsonRequest, RequestError } from "../src/api/http";
 import { usePlayerStore } from "../src/stores/player";
+import { useSessionStore } from "../src/stores/session";
 import type { Song } from "../src/types";
 
 class FakeAudio extends EventTarget {
@@ -131,6 +132,7 @@ describe("persistent player and queue", () => {
     p.enqueue(song("1"));
     p.enqueue(song("2"));
     await p.select(0);
+    p.playMode = "sequence";
     p.engine.audio.dispatchEvent(new Event("ended"));
     await vi.waitFor(() => expect(p.current?.songId).toBe("2"));
     p.remove(0);
@@ -159,5 +161,64 @@ describe("persistent player and queue", () => {
     expect(p.engine.audio.currentTime).toBe(60);
     p.setVolume(-5);
     expect(p.volume).toBe(0);
+  });
+  it("repeats a single track without reloading media and wraps sequential navigation", async () => {
+    const p = usePlayerStore();
+    const resolver = vi.fn(async (item: Song) => ({ url: `/${item.songId}.wav` }));
+    p.setResolver(resolver);
+    p.enqueue(song("1")); p.enqueue(song("2"));
+    await p.select(1);
+    p.engine.audio.currentTime = 60;
+    p.engine.audio.dispatchEvent(new Event("ended"));
+    await vi.waitFor(() => expect(p.engine.audio.currentTime).toBe(0));
+    expect(p.current?.songId).toBe("2");
+    expect(resolver).toHaveBeenCalledTimes(1);
+    p.playMode = "sequence";
+    p.engine.audio.dispatchEvent(new Event("ended"));
+    await vi.waitFor(() => expect(p.current?.songId).toBe("1"));
+    await p.previous(); expect(p.current?.songId).toBe("2");
+    await p.next(); expect(p.current?.songId).toBe("1");
+  });
+  it("randomly picks a different track and handles one or no tracks", async () => {
+    const p = usePlayerStore();
+    p.setResolver(async () => ({ url: "/fixture.wav" }));
+    p.playMode = "random";
+    await p.next(); await p.previous(); expect(p.index).toBe(-1);
+    p.enqueue(song("1")); await p.next(); await p.next(); expect(p.index).toBe(0);
+    p.enqueue(song("2")); p.enqueue(song("3"));
+    const random = vi.spyOn(Math, "random").mockReturnValue(0);
+    try {
+      await p.next(); expect(p.index).toBe(1);
+      random.mockReturnValue(.999999);
+      await p.next(); expect(p.index).toBe(0);
+    } finally { random.mockRestore(); }
+  });
+  it("restores the selected volume after muting, including slider changes", () => {
+    const p = usePlayerStore();
+    p.setVolume(.42); p.toggleMute(); expect(p.engine.audio.volume).toBe(0);
+    p.toggleMute(); expect(p.engine.audio.volume).toBe(.42);
+    p.setVolume(.2); p.setVolume(0); p.toggleMute(); expect(p.volume).toBe(.2);
+  });
+  it("requires account login before making media requests", async () => {
+    const fetcher = vi.fn(); vi.stubGlobal("fetch", fetcher);
+    const p = usePlayerStore(); p.enqueue(song("1")); await p.select(0);
+    expect(p.message).toContain("请先登录");
+    expect(p.playing).toBe(false); expect(fetcher).not.toHaveBeenCalled();
+  });
+  it("uses the account access token for both media preparation and playback", async () => {
+    vi.stubGlobal("window", { location: { origin: "https://app.example.test" } });
+    const fetcher = vi.fn(async (url: string) => Response.json(url.includes("/session/login")
+      ? { success: true, user: { id: "1", username: "测试" }, tokens: { accessToken: "account-access", refreshToken: "renewal" } }
+      : url.includes("processMp3") ? { success: true } : { state: "READY", ready: true }));
+    vi.stubGlobal("fetch", fetcher);
+    await useSessionStore().login("test@example.test", "password");
+    const p = usePlayerStore();
+    const load = vi.spyOn(p.engine, "load").mockResolvedValue(true);
+    p.enqueue(song("1")); await p.select(0);
+    const requests = fetcher.mock.calls as unknown as [string, RequestInit][];
+    expect(requests.slice(1)).toHaveLength(2);
+    for (const [, init] of requests.slice(1)) expect(init.headers).toEqual({ Authorization: "Bearer account-access" });
+    expect(load).toHaveBeenCalledWith(expect.objectContaining({ token: "account-access", hls: true }));
+    expect(p.playing).toBe(true);
   });
 });
