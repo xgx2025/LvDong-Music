@@ -18,6 +18,15 @@ public class QqPlaylistController {
     private final QqPlaylistService playlists;
     public QqPlaylistController(SessionService sessions, QqPlaylistService playlists) { this.sessions = sessions; this.playlists = playlists; }
     @ModelAttribute public void noCache(HttpServletResponse response) { response.setHeader("Cache-Control", "no-store"); }
+    @GetMapping("/daily-songs")
+    public Result<List<Song>> dailySongs(@RequestHeader(value = "Authorization", required = false) String auth) {
+        return Result.success(playlists.dailySongs(sessions.identity(auth)));
+    }
+    @GetMapping("/songs/{songMid}/lyrics")
+    public Result<Lyrics> lyrics(@RequestHeader(value = "Authorization", required = false) String auth,
+            @PathVariable @Pattern(regexp = "[A-Za-z0-9]{1,100}") String songMid) {
+        return Result.success(playlists.lyrics(sessions.identity(auth), songMid));
+    }
     @GetMapping("/playlists")
     public Result<PlaylistPage> remote(@RequestHeader(value = "Authorization", required = false) String auth,
                                       @RequestParam(defaultValue = "0") @Min(0) @Max(20000) int favoriteOffset) {

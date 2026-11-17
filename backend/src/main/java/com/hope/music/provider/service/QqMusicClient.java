@@ -51,6 +51,9 @@ public class QqMusicClient {
             try (InputStream input = response.body()) {
                 if (response.statusCode() == 401) throw new ResponseStatusException(HttpStatus.CONFLICT, "QQ 音乐连接已失效，请重新连接");
                 if (response.statusCode() == 429) throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "QQ 音乐操作过于频繁，请稍后再试");
+                if (response.statusCode() == 422 && path.equals("/user/daily-songs")) {
+                    throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "QQ 音乐暂未提供今日推荐，请稍后再来听听");
+                }
                 if (response.statusCode() != 200) throw unavailable();
                 byte[] body = input.readNBytes(8_388_609);
                 if (body.length > 8_388_608) throw unavailable();
@@ -58,7 +61,7 @@ public class QqMusicClient {
                 if (json == null || !json.isObject()) throw unavailable();
                 if (path.equals("/getMusicPlay")) {
                     if (!json.path("data").path("playUrl").isObject()) throw unavailable();
-                } else if (path.equals("/getSongListDetail")) {
+                } else if (path.equals("/getSongListDetail") || path.equals("/getLyric")) {
                     if (!json.path("response").isObject()) throw unavailable();
                 } else {
                     if (!json.path("code").isNumber()) throw unavailable();

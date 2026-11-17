@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import AppIcon from "../components/AppIcon.vue";
-function scrollToSongs() { document.getElementById("search")?.scrollIntoView({ behavior: "smooth" }); }
 import { onBeforeUnmount, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { search } from "../api/search";
 import type { SearchResult, Song } from "../types";
 import { usePlayerStore } from "../stores/player";
-import HomeDiscovery from "../components/HomeDiscovery.vue";
+import MusicHomeView from "./MusicHomeView.vue";
 import CoverArt from "../components/CoverArt.vue";
 import FavoriteButton from "../components/FavoriteButton.vue";
 import { useFavoritesStore } from "../stores/favorites";
@@ -26,6 +25,7 @@ const pageNumber = () =>
   Math.min(2147483647, Math.max(1, Math.floor(Number(route.query.page)) || 1));
 async function load() {
   request?.abort();
+  if (!route.query.q && !route.query.category) { result.value = undefined; loading.value = false; error.value = ""; return; }
   request = new AbortController();
   const active = request;
   category.value = ["songs", "artists", "albums", "playlists"].includes(String(route.query.category)) ? String(route.query.category) : "songs";
@@ -65,23 +65,8 @@ watch(() => [result.value, session.authenticated], () => {
 onBeforeUnmount(() => request?.abort());
 </script>
 <template>
-  <template v-if="!route.query.q && !route.query.category">
-    <section class="welcome">
-      <h1>嗨，<span>{{ session.user?.username || "音乐爱好者" }}</span></h1>
-      <p>今日为你推荐这些好音乐</p>
-    </section>
-    <section class="home-banner">
-      <img src="https://picsum.photos/1200/400?random=1" alt="热门推荐" />
-      <div class="banner-copy">
-        <span>精选歌单</span>
-        <h2>夏日限定 · 清凉节奏</h2>
-        <p>32首适合夏日聆听的轻快旋律，陪你度过炎热午后</p>
-      </div>
-      <a class="banner-play" href="#" @click.prevent="scrollToSongs" aria-label="浏览推荐歌曲">▶</a>
-    </section>
-    <HomeDiscovery />
-  </template>
-  <section id="search" class="search-section">
+  <MusicHomeView v-if="!route.query.q && !route.query.category" />
+  <section v-else id="search" class="search-section">
     <div class="section-heading">
       <h2>{{ route.query.q || route.query.category ? '搜索结果' : '最新歌曲' }}</h2>
     </div>

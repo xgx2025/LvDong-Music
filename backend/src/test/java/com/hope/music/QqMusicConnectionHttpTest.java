@@ -100,6 +100,15 @@ class QqMusicConnectionHttpTest {
                     if (mode.equals("broken") && offset > 0) status = 502;
                 }
                 if (path.equals("/user/liked-songs")) body = Map.of("code", 200, "songs", rawSongs(0, 2), "total", 2, "more", false);
+                if (path.equals("/user/daily-songs")) {
+                    body = Map.of("code", 200, "songs", mode.equals("daily-malformed") ? "invalid" : rawSongs(0, 30));
+                    if (mode.equals("daily-empty")) status = 422;
+                }
+                if (path.equals("/getLyric")) {
+                    body = Map.of("response", Map.of("code", mode.equals("lyric-invalid") ? 1 : 0,
+                            "lyric", mode.equals("lyric-empty") ? "" : "[00:00.00]第一行&#10;[00:02.00]第二行 &amp; 合唱",
+                            "musickey", "must-not-leak"));
+                }
                 if (path.equals("/getSongListDetail")) body = Map.of("response", Map.of("code", 0, "cdlist", List.of(
                         Map.of("dissname", mode.equals("private-shell") ? "" : "收藏歌单", "songlist", rawSongs(0, 2), "total_song_num", 2))));
                 if (path.equals("/getMusicPlay")) {
@@ -174,6 +183,40 @@ class QqMusicConnectionHttpTest {
     }
     void connect(String token) throws Exception {
         String id = start(token); ok(call("POST", "/login/" + id + "/check", null, token));
+    }
+    @Test void dailyRecommendationsUseOnlyTheCurrentAccountsMusicSession() throws Exception {
+        assertThat(call("GET", "/daily-songs", null, null).statusCode()).isEqualTo(401);
+        connect(first);
+        HEADERS.clear();
+        JsonNode songs = ok(call("GET", "/daily-songs", null, first));
+        assertThat(songs.size()).isEqualTo(30);
+        assertThat(songs.get(0).path("provider").asString()).isEqualTo("qq");
+        assertThat(songs.get(0).path("providerSongId").asString()).isEqualTo("mid0");
+        assertThat(songs.get(0).path("duration").asString()).isEqualTo("3:01");
+        assertThat(HEADERS).isNotEmpty().doesNotContain(first, second);
+        assertThat(call("GET", "/daily-songs", null, second).statusCode()).isEqualTo(409);
+        mode = "daily-empty";
+        assertThat(call("GET", "/daily-songs", null, first).statusCode()).isEqualTo(422);
+        mode = "daily-malformed";
+        assertThat(call("GET", "/daily-songs", null, first).statusCode()).isEqualTo(503);
+        mode = "offline";
+        assertThat(call("GET", "/daily-songs", null, first).statusCode()).isEqualTo(503);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM qq_music_connection", Integer.class)).isEqualTo(1);
+    }
+    @Test void loadsNormalizedLyricsWithAuthenticationAndHandlesEmptyAndFailedLyrics() throws Exception {
+        String path = "/songs/mid0/lyrics";
+        assertThat(call("GET", path, null, null).statusCode()).isEqualTo(401);
+        connect(first);
+        JsonNode lyrics = ok(call("GET", path, null, first));
+        assertThat(lyrics.path("lyric").asString()).isEqualTo("[00:00.00]第一行\n[00:02.00]第二行 & 合唱");
+        assertThat(call("GET", path, null, second).statusCode()).isEqualTo(409);
+        assertThat(call("GET", "/songs/invalid_mid/lyrics", null, first).statusCode()).isEqualTo(400);
+        mode = "lyric-empty";
+        assertThat(ok(call("GET", path, null, first)).path("lyric").asString()).isEmpty();
+        mode = "lyric-invalid";
+        assertThat(call("GET", path, null, first).statusCode()).isEqualTo(503);
+        mode = "offline";
+        assertThat(call("GET", path, null, first).statusCode()).isEqualTo(503);
     }
     @Test void importsEveryPageAndUpdatesSnapshotWithoutDuplicatingOrLeakingToOtherUser() throws Exception {
         connect(first);

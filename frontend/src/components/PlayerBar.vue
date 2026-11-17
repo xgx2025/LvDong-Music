@@ -65,9 +65,9 @@ const time = (value: number) =>
         }}
       </p>
       <p v-if="p.current?.albumName" class="playing-album">{{ p.current.albumName }}</p>
-      <LyricsPanel :path="p.current?.lyricUrl" />
+      <LyricsPanel :path="p.current?.lyricUrl" :qq-song-id="p.current?.provider === 'qq' ? p.current.providerSongId : undefined" />
       <RouterLink v-if="p.current && p.current.provider !== 'qq'" :to="`/song/${p.current.songId}`" @click="p.expanded = false"><AppIcon name="chat" />查看歌曲与评论</RouterLink>
-      <p v-if="p.current?.provider === 'qq'">QQ 音乐{{ p.preview ? ' · 试听片段' : '' }}</p>
+      <p v-if="p.current?.provider === 'qq'">QQ 音乐{{ p.preview ? ' · 试听片段' : '' }} · <RouterLink to="/qq-playlists" @click="p.expanded = false">回到我的歌单</RouterLink></p>
     </div>
     <div class="player-row">
       <button

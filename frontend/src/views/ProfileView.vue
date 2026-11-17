@@ -84,7 +84,7 @@ const date = computed(() => {
       <p v-if="statusError" class="form-error" role="alert">{{ statusError }} <button @click="loadStatus">重试资格查询</button></p>
       <p v-if="notice" role="status">{{ notice }}</p>
       <div class="profile-actions"><button @click="logout"><AppIcon name="logout" />退出登录</button><RouterLink class="orange-button" to="/musician"><AppIcon name="guitar" />{{ status === 'approved' ? '音乐人资料' : '申请成为音乐人' }}</RouterLink><button class="primary" @click="edit"><AppIcon name="edit" />编辑资料</button></div>
-      <div class="profile-shortcuts"><RouterLink to="/favorites"><AppIcon name="heart" />我的收藏</RouterLink><RouterLink to="/upload"><AppIcon name="upload" />上传音乐</RouterLink></div>
+      <div class="profile-shortcuts"><RouterLink to="/favorites"><AppIcon name="heart" />我的收藏</RouterLink><RouterLink to="/qq-playlists"><AppIcon name="music" />我的 QQ 歌单</RouterLink><RouterLink to="/upload"><AppIcon name="upload" />上传音乐</RouterLink></div>
       <QqMusicConnection />
     </div>
     <dialog ref="dialog" class="profile-dialog" aria-labelledby="edit-profile-title" @click="backdrop" @close="closed" @cancel="busy && $event.preventDefault()">

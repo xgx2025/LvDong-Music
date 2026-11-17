@@ -59,6 +59,8 @@ async function request<T>(path: string, method = "GET", body?: unknown, signal?:
 }
 
 export const qqMusic = {
+  lyrics: (songMid: string, signal?: AbortSignal) => request<{ lyric: string }>(`/songs/${encodeURIComponent(songMid)}/lyrics`, "GET", undefined, signal),
+  dailySongs: (signal?: AbortSignal) => request<Song[]>("/daily-songs", "GET", undefined, signal),
   status: () => request<QqConnection>("/connection"),
   capabilities: () => request<{ configured: boolean; channels: QqChannel[] }>("/capabilities"),
   start: (channel: QqChannel) => request<QqQrTask>("/login", "POST", { channel }),

@@ -4,6 +4,7 @@ import { cancelQqTask, qqMusic, type QqChannel, type QqConnection, type QqQrTask
 import { useSessionStore } from "../stores/session";
 import { errorText } from "../api/servlet";
 
+const emit = defineEmits<{ changed: [] }>();
 const session = useSessionStore();
 const connection = ref<QqConnection>();
 const loading = ref(true), busy = ref(false), error = ref(""), notice = ref("");
@@ -42,7 +43,7 @@ async function poll(version: number) {
     if (disposed || version !== generation) return;
     task.value = result;
     if (result.state === "confirmed") {
-      closeDialog(); notice.value = "QQ 音乐账号已连接"; await loadStatus(); return;
+      closeDialog(); notice.value = "QQ 音乐账号已连接"; await loadStatus(); emit("changed"); return;
     }
     if (result.state === "expired") return;
     schedule(version);
@@ -87,7 +88,7 @@ async function disconnect() {
     await qqMusic.disconnect();
     if (!disposed && version === generation) {
       connection.value = { configured: connection.value?.configured ?? true, connected: false, needsReconnect: false, nickname: null, connectedAt: null };
-      notice.value = "已断开 QQ 音乐连接";
+      notice.value = "已断开 QQ 音乐连接"; emit("changed");
     }
   } catch (e) { if (!disposed && version === generation) error.value = errorText(e); }
   finally { if (!disposed) busy.value = false; }
@@ -103,12 +104,13 @@ onBeforeUnmount(() => { disposed = true; stopTask(); });
 
 <template>
   <section class="qq-connection" aria-labelledby="qq-connection-title">
-    <div class="qq-connection-heading"><div><span class="qq-eyebrow">音乐账号</span><h3 id="qq-connection-title">连接 QQ 音乐</h3></div><span class="qq-connection-state" :class="{ connected: connection?.connected }">{{ loading ? '查询中' : connection?.connected ? '已连接' : connection?.needsReconnect ? '需要重新连接' : '未连接' }}</span></div>
+    <div class="qq-connection-heading"><div><span class="qq-eyebrow">音乐账号</span><h3 id="qq-connection-title">{{ connection?.connected ? 'QQ 音乐账号' : '连接 QQ 音乐' }}</h3></div><span class="qq-connection-state" :class="{ connected: connection?.connected }">{{ loading ? '查询中' : connection?.connected ? '已连接' : connection?.needsReconnect ? '需要重新连接' : '未连接' }}</span></div>
     <p v-if="loading">正在查询连接状态…</p>
-    <p v-else-if="connection?.connected">已连接 {{ connection.nickname }}，可在这里管理账号连接。</p>
+    <p v-else-if="connection?.connected">{{ connection.nickname || '音乐账号' }}，你的音乐收藏已就绪。</p>
     <p v-else-if="connection?.needsReconnect">{{ connection.nickname || 'QQ 音乐账号' }} 的连接已失效，请重新扫码连接。</p>
     <p v-else-if="connection && !connection.configured">QQ 音乐连接暂未开放。</p>
-    <p v-else>通过手机扫码连接你的 QQ 音乐账号。</p>
+    <p v-else>扫码一次，把我喜欢、自建和收藏歌单带到律动。</p>
+    <div v-if="!connection?.connected && !loading" class="qq-connection-benefits"><span>读取 QQ 歌单</span><span>保存到本站</span><span>加入统一播放队列</span></div>
     <p v-if="error" class="form-error" role="alert">{{ error }}</p>
     <p v-if="notice" role="status">{{ notice }}</p>
     <div class="qq-connection-actions">
@@ -126,13 +128,13 @@ onBeforeUnmount(() => { disposed = true; stopTask(); });
       <p v-if="task && !qrBusy" role="status">{{ task.message || hint }}</p>
       <p v-if="qrError" role="alert" class="form-error">{{ qrError }}</p>
       <div class="qq-connection-actions"><button v-if="qrError && task && task.state !== 'expired'" @click="retryCheck">重试检查</button><button :disabled="qrBusy" @click="createQr">刷新二维码</button><button @click="closeDialog">取消</button></div>
-      <small>账号密码无需在本站输入。你可以随时在个人中心断开连接。</small>
+      <small>连接成功后，可直接在“我的音乐”查看歌单。账号密码无需在本站输入。你可以随时在个人中心断开连接。</small>
     </dialog>
   </section>
 </template>
 
 <style scoped>
-.qq-connection { margin-top: 26px; padding: 24px; border: 1px solid #dce9df; border-radius: 18px; background: #f8fcf9; color: #202824; }
+.qq-connection { margin-top: 26px; padding: 24px; border: 1px solid #dce5f1; border-radius: 18px; background: #ffffff80; color: #202824; }
 .qq-connection-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .qq-eyebrow { color: #16854c; font-size: 12px; font-weight: 600; letter-spacing: .08em; }
 .qq-connection h3 { margin: 5px 0 12px; font-size: 21px; }
@@ -145,8 +147,15 @@ onBeforeUnmount(() => { disposed = true; stopTask(); });
 .qq-dialog h2 { margin: 8px 0 12px; font-size: 24px; }
 .qq-dialog small { display: block; margin-top: 20px; color: #65736b; line-height: 1.7; }
 .qq-dialog .dialog-close { color: #65736b; }
-.qq-qr-frame { display: grid; place-items: center; width: 232px; height: 232px; margin: 22px auto; padding: 12px; box-sizing: border-box; border: 1px solid #dce9df; border-radius: 12px; background: #fff; }
+.qq-qr-frame { display: grid; place-items: center; width: 232px; height: 232px; margin: 22px auto; padding: 12px; box-sizing: border-box; border: 1px solid #dce5f1; border-radius: 12px; background: #fff; }
 .qq-qr-frame img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .qq-channel-select { display: flex; align-items: center; gap: 12px; }
 @media (max-width: 480px) { .qq-connection { padding: 18px; } .qq-dialog { padding: 24px; } }
+</style>
+
+<style scoped>
+.qq-connection-benefits { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.qq-connection-benefits span { padding: 5px 9px; border-radius: 6px; background: #eef2fa; color: #55657c; font-size: 11px; }
+:global(.dark-theme) .qq-connection { background: #1d2636; border-color: #344157; color: #edf2fa; }
+:global(.dark-theme) .qq-connection-benefits span { background: #2a364a; color: #cad5e6; }
 </style>

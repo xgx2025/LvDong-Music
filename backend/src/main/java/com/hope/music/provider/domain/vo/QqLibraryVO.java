@@ -14,4 +14,5 @@ public final class QqLibraryVO {
     public record SongPage(List<Song> items, int total, int offset, int nextOffset, boolean more) { }
     public record ImportedPlaylist(String id, String providerPlaylistId, String name, String coverUrl, int songCount, long importedAt) { }
     public record Playback(String url, boolean preview, String quality) { }
+    public record Lyrics(String lyric) { }
 }

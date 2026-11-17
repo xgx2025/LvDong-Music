@@ -24,8 +24,31 @@ public class QqPlaylistService {
     public PlaylistPage playlists(String userId, int favoriteOffset) {
         return connections.withSession(userId, session -> remotePlaylists(session, favoriteOffset).page());
     }
+    public List<Song> dailySongs(String userId) {
+        return connections.withSession(userId, session -> {
+            JsonNode songs = client.get("/user/daily-songs", Map.of(), session.token()).path("songs");
+            if (!songs.isArray() || songs.size() > 100) throw invalid();
+            var normalized = new LinkedHashMap<String, Song>();
+            for (JsonNode raw : songs) {
+                Song entry = song(raw);
+                normalized.putIfAbsent(entry.providerSongId(), entry);
+            }
+            return List.copyOf(normalized.values());
+        });
+    }
     public SongPage remoteSongs(String userId, String id, int offset, int limit) {
         return connections.withSession(userId, session -> readSongs(session, findRemote(session, id), offset, limit));
+    }
+    public Lyrics lyrics(String userId, String songMid) {
+        return connections.withSession(userId, session -> {
+            JsonNode response = client.get("/getLyric", Map.of("songmid", songMid, "isFormat", "false"), session.token()).path("response");
+            if (!response.path("code").isNumber() || response.path("code").asInt(-1) != 0) throw invalid();
+            JsonNode lyric = response.path("lyric");
+            if (!lyric.isMissingNode() && !lyric.isNull() && !lyric.isString()) throw invalid();
+            String text = lyric.asString("");
+            if (text.length() > 524288) throw invalid();
+            return new Lyrics(org.springframework.web.util.HtmlUtils.htmlUnescape(text));
+        });
     }
     public ImportedPlaylist importPlaylist(String userId, String id) {
         return connections.withSession(userId, session -> {

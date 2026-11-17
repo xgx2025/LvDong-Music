@@ -435,7 +435,7 @@ nav { gap: 18px; }
 .musician-gate { text-align: center; padding: 40px 24px; }
 .musician-gate > .feature-icon { margin: 0 auto 24px; width: 80px; height: 80px; font-size: 36px; }
 .musician-gate .feature-grid { margin: 32px auto; max-width: 800px; }
-.player.expanded { inset: 0; max-height: 100dvh; background: linear-gradient(rgba(30,41,59,.4),rgba(30,41,59,.4)),linear-gradient(135deg,var(--player-cover-color,#4a6cf7),#3becb4); padding-top: 0; --primary: #16ffff; }
+.player.expanded { inset: 0; z-index: 40; max-height: 100dvh; background: linear-gradient(rgba(30,41,59,.4),rgba(30,41,59,.4)),linear-gradient(135deg,var(--player-cover-color,#4a6cf7),#3becb4); padding-top: 0; --primary: #16ffff; }
 .expanded-player-heading { position: sticky; top: 0; display: flex; justify-content: space-between; align-items: center; padding: 16px; background: rgba(255,255,255,.1); backdrop-filter: blur(10px); z-index: 2; margin-bottom: 40px; }
 .expanded-player-heading button { border: 0; background: transparent; }
 .now-playing { padding-top: 0; }
@@ -602,3 +602,9 @@ button > .app-icon, a > .app-icon, h1 > .app-icon, h2 > .app-icon, h3 > .app-ico
 
 .track-info, .expanded-player-heading { touch-action: pan-x; }
 .player-gesture-handle { position: absolute; top: 5px; left: calc(50% - 18px); width: 36px; height: 3px; border-radius: 3px; background: rgba(255,255,255,.45); }
+
+/* Quiet surfaces for listening; account and legal pages keep their dark palette. */
+.app-shell:not(.dark-theme):not(.auth-layout) { background: #f7f8fa; min-height: 100vh; }
+:root { font-family: 'Microsoft YaHei UI', 'PingFang SC', 'Noto Sans SC', sans-serif; --primary: #314db5; }
+.player:not(.dark-player):not(.expanded) { background: #fffffff2; border-top-color: #e7ebf2; box-shadow: 0 -5px 25px #25395305; }
+.player:not(.dark-player) .play-button { background: #314db5; }

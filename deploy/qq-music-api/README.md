@@ -1,6 +1,6 @@
 # QQ 音乐账号连接服务
 
-本站的 QQ 音乐功能依赖固定版本 `@yakult-green-tea/qq-music-api@3.3.6`。它是[非官方 QQ 音乐 API](https://github.com/yakult-green-tea/qq-music-api)，按每个用户自己的扫码会话连接。支持账号连接、歌单读取与导入、加载播放队列和标准音质播放；QQ 曲库搜索尚未接入。
+本站的 QQ 音乐功能依赖固定版本 `@yakult-green-tea/qq-music-api@3.3.6`。它是[非官方 QQ 音乐 API](https://github.com/yakult-green-tea/qq-music-api)，按每个用户自己的扫码会话连接。支持账号连接、当前账号的每日推荐、歌单读取与导入、加载播放队列和标准音质播放；QQ 曲库搜索尚未接入。
 
 ## 直接运行 Node.js（本地推荐）
 
@@ -48,7 +48,7 @@ QQ_MUSIC_CONNECTION_KEY=<另一个Base64编码的32字节随机密钥>
 
 ## 导入与加载歌单
 
-连接后进入导航栏的“QQ歌单”，或从个人中心点击“管理 QQ 歌单”：
+首页直接展示 QQ 音乐为当前账号返回的每日推荐与歌单，推荐暂不可用时展示重试状态，不以静态内容替代。连接后进入导航栏的“我的音乐”，或从个人中心点击“管理 QQ 歌单”：
 
 1. 在“QQ 账号歌单”查看“我喜欢”、自建和收藏的歌单，选择歌单后分页读取歌曲。
 2. 点击“导入本站”，后端完整读取歌曲后，将元数据保存为本人私有快照；同一站内用户、QQ 账号和源歌单再次导入会更新同一快照。
@@ -74,6 +74,8 @@ Boot 绑定加密密钥、QQ 服务密钥和 QQ 会话文件应跨重启保持�
 | `POST /login/{id}/check` | 检查本人任务并在确认后保存绑定 |
 | `DELETE /login/{id}` | 取消本人任务，不删除已确认的绑定 |
 | `DELETE /connection` | 删除本人绑定并尽力撤销上游会话 |
+| `GET /songs/{songMid}/lyrics` | 获取当前 QQ 歌曲的 LRC 歌词；无歌词时返回空文本，失败可重试 |
+| `GET /daily-songs` | 使用当前账号会话读取 QQ 音乐今日推荐；返回标准歌曲列表，不存储推荐内容 |
 | `GET /playlists?favoriteOffset=0` | 当前 QQ 账号歌单及收藏续读位置 |
 | `GET /playlists/{id}/songs?offset=0&limit=100` | 本人账号歌单的歌曲分页，`liked` 代表我喜欢 |
 | `POST /imports` | `{playlistId:"..."}` 完整导入或更新快照 |
